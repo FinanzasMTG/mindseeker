@@ -1,0 +1,11 @@
+/.DS_Store
+/.streamlit
+/__MACOSX
+AllPrintings.sqlite
+.env
+/chromedriver
+/images
+/images/MTG
+/images/Lorcana
+/images/StarWarsUnlimited
+*.png

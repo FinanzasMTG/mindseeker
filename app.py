@@ -644,7 +644,7 @@ if 'username_selected' not in st.session_state:
 # Always show sidebar for initial state
 with st.sidebar:
     st.title("🦊 Mindseeker by FinanzasMTG")
-    username = st.text_input("Enter your username:", value="FinanzasMTG")
+    username = st.text_input("Enter your username:")
     if st.button("Enter"):
         st.session_state.username = username
         st.session_state.username_selected = True

@@ -1,0 +1,7 @@
+streamlit
+pandas
+google-cloud-bigquery
+google-oauth2-tool
+gspread
+python-dotenv
+plotly 

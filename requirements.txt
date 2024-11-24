@@ -5,4 +5,4 @@ google-oauth2-tool
 gspread
 python-dotenv
 plotly 
-st_aggrid
+streamlit-aggrid

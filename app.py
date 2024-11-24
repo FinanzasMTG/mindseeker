@@ -470,27 +470,68 @@ st.markdown("""
 # Add this CSS before the sidebar content
 st.markdown("""
     <style>
-    /* Normal state */
+    /* Normal state for login button */
     .stButton > button {
-        color: #ffffff;
-        border-color: #03a088;
-        background-color: #03a088;
+        color: #ffffff !important;
+        border-color: #03a088 !important;
+        background-color: #03a088 !important;
     }
     
-    /* Hover state */
+    /* Hover state for login button */
     .stButton > button:hover {
-        color: #ffffff;
-        border-color: #03a088;
-        background-color: #028474;  /* Slightly darker shade for hover */
+        color: #ffffff !important;  /* Force white color on hover */
+        border-color: #03a088 !important;
+        background-color: #028474 !important;  /* Slightly darker shade for hover */
     }
     
-    /* Click/Active state */
+    /* Click/Active state for login button */
     .stButton > button:active, 
     .stButton > button:focus {
         color: #ffffff !important;
         border-color: #03a088 !important;
         background-color: #03a088 !important;
         box-shadow: none !important;
+    }
+    
+    /* Password toggle button specific styling */
+    button[aria-label="Toggle password visibility"],
+    button[aria-label="Toggle password visibility"] svg,
+    button[aria-label="Toggle password visibility"] path {
+        background: transparent !important;
+        border: none !important;
+        color: rgba(255, 255, 255, 0.5) !important;
+        fill: rgba(255, 255, 255, 0.5) !important;
+        stroke: rgba(255, 255, 255, 0.5) !important;
+    }
+    
+    /* Hover states for password toggle */
+    button[aria-label="Toggle password visibility"]:hover,
+    button[aria-label="Toggle password visibility"]:hover svg,
+    button[aria-label="Toggle password visibility"]:hover path {
+        background: transparent !important;
+        color: rgba(255, 255, 255, 0.8) !important;
+        fill: rgba(255, 255, 255, 0.8) !important;
+        stroke: rgba(255, 255, 255, 0.8) !important;
+    }
+    
+    /* Remove any button styling from password toggle */
+    button[aria-label="Toggle password visibility"] {
+        border: none !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background-color: transparent !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Add this CSS block after your existing login form styling
+st.markdown("""
+    <style>
+    /* Style for username and password input fields */
+    [data-testid="stForm"] input[type="text"],
+    [data-testid="stForm"] input[type="password"] {
+        border-radius: 2px !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -506,23 +547,23 @@ COLUMN_NAMES = {
     'signed': 'Signed',
     'country': 'Country',
     'from_price': 'From Price',
-    'trend_price': 'Trend Price',
-    'ms_trend_price': 'MS Trend Price',
-    'efficient_price': 'Efficient Price',
-    'conservative_price': 'Conservative Price',
-    'value_price': 'Value Price',
+    'trend_price': 'Trend Price in €',
+    'ms_trend_price': 'MS Trend Price in €',
+    'efficient_price': 'Efficient Price in €',
+    'conservative_price': 'Conservative Price in €',
+    'value_price': 'Value Price in €',
     'alerts': 'Alerts',
     'notes': 'Notes',
     'date': 'Date',
-    'listed_price': 'Cardmarket Listed Price',
+    'listed_price': 'Cardmarket Listed Price in €',
     'listed_stock': 'Cardmarket Listed Stock',
     'total_stock': 'Total Stock',
     'country_stock': 'Country Stock',
     'price_growth': 'Price Growth',
     'equity_in_country': 'Equity in Country',
     'equity_on_cardmarket': 'Equity on Cardmarket',
-    'total_efficient_value': 'Total Value',
-    'total_conservative_value': 'Conservative Value',
+    'total_efficient_value': 'Total Value in €',
+    'total_conservative_value': 'Conservative Value in €',
     'collection_number': 'Collection Number',
     'rarity': 'Rarity',
     'reserved_list': 'Reserved List',
@@ -704,7 +745,7 @@ def load_user_data(username):
     price_columns = [
         'trend_price', 'efficient_price', 'conservative_price', 
         'from_price', 'value_price', 'purchase_price', 'listed_price',
-        'total_efficient_value', 'total_conservative_value'
+        'total_efficient_value', 'total_conservative_value', 'ms_trend_price'
     ]
     
     # Other numeric columns
@@ -768,60 +809,101 @@ def verify_credentials(username, password):
     stored_password = user_row['password'].iloc[0]
     return password == stored_password
 
-# Update the sidebar and main content section
+# Move the login form from sidebar to main content
 if 'username_selected' not in st.session_state:
     st.session_state.username_selected = False
+    st.session_state.username = None  # Initialize username in session state
 
-# Always show sidebar for initial state
-with st.sidebar:
+# Remove the sidebar login content and move it to main
+if not st.session_state.username_selected:
+    # Center-align the logo and login form
     st.markdown(f"""
-        <div style="display: flex; justify-content: center; margin-bottom: 30px;">
-            <img src="data:image/png;base64,{app_logo_encoded}" style="width: 400px; height: auto;">
+        <div style="
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+        ">
+            <img src="data:image/png;base64,{app_logo_encoded}" style="width: 400px; height: auto; margin-bottom: 2rem;">
         </div>
     """, unsafe_allow_html=True)
 
-    # Create a form to handle Enter key submission
-    with st.form("login_form"):
-        username = st.text_input("Enter your username:")
-        password = st.text_input("Enter your password:", type="password")
-        submit_button = st.form_submit_button("Login")
-        
-        if submit_button:
-            if verify_credentials(username, password):
-                st.session_state.username = username
-                st.session_state.username_selected = True
-                # Add CSS class to hide sidebar
-                st.markdown("""
-                    <style>
-                    [data-testid="stSidebar"] {
-                        display: none;
-                    }
-                    .main .block-container {
-                        padding-left: 5% !important;
-                        padding-right: 5% !important;
-                    }
-                    </style>
-                """, unsafe_allow_html=True)
-                st.rerun()
-            else:
-                st.error("Invalid username or password")
+    # Create a narrower centered container for the login form
+    col1, col2, col3 = st.columns([2,1,2])  # Adjust ratio to make middle column narrower
+    with col2:
+        with st.form("login_form"):
+            input_username = st.text_input("Enter your username:")
+            password = st.text_input("Enter your password:", type="password")
+            submit_button = st.form_submit_button("Login")
+            
+            if submit_button:
+                if verify_credentials(input_username, password):
+                    st.session_state.username = input_username
+                    st.session_state.username_selected = True
+                    st.rerun()
+                else:
+                    st.error("Invalid username or password")
 
-if st.session_state.username_selected:
-    # Hide sidebar after successful login
+    # Display the intro text below login form
+    st.info("""
+    📈 Welcome to KitsuneMTG, your intelligent MTG Portfolio Tracker!
+
+    This dashboard provides insights into your Magic: The Gathering collection, helping you make informed decisions about your cards.
+
+    All data is synchronized with Cardmarket to ensure you have up-to-date information for your collection. Use the tabs above to navigate through different views and discover the full potential of your MTG portfolio.
+            
+    Enter your username to get started! 🎉
+    """)
+
+    # Social Media Icons
     st.markdown("""
+        <div style="display: flex; justify-content: center; gap: 30px; padding: 0px;">
+                <i class="fa-brands fa-x-twitter fa-lg" style="color: rgba(255,255,255,0.7);"></i>
+                <i class="fa-brands fa-youtube fa-lg" style="color: rgba(255,255,255,0.7);"></i>
+                <i class="fa-brands fa-patreon fa-lg" style="color: rgba(255,255,255,0.7);"></i>
+                <i class="fa-solid fa-globe fa-lg" style="color: rgba(255,255,255,0.7);"></i>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Add Font Awesome CSS with latest version
+    st.markdown("""
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
         <style>
-        [data-testid="stSidebar"] {
-            display: none;
+        .fa-lg {
+            font-size: 1.5em !important;
+            cursor: pointer;
         }
-        .main .block-container {
-            padding-left: 5% !important;
-            padding-right: 5% !important;
+        .fa-lg:hover {
+            color: #03a088 !important;
+            transform: scale(1.1);
+            transition: all 0.2s ease-in-out;
         }
         </style>
     """, unsafe_allow_html=True)
+
+    # Footer Logo
+    logo_path = os.path.join(assets_path, 'Alpha_Logo.png')
+    with open(logo_path, "rb") as f:
+        logo_contents = f.read()
+    logo_encoded = base64.b64encode(logo_contents).decode()
+
+
+    st.markdown(
+        f"""
+        <div style="display: flex; justify-content: center; padding: 0px; margin-top: 0px;">
+            <img src="data:image/png;base64,{logo_encoded}" style="width: 100px; height: auto;">
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     
+
+# Main app content (only shown after login)
+if st.session_state.username_selected and st.session_state.username:
     try:
-        df = load_user_data(username)
+        df = load_user_data(st.session_state.username)
         
         if len(df) == 0:
             st.error("No data found for this username")
@@ -844,7 +926,7 @@ if st.session_state.username_selected:
                             font-size: 32px;
                             font-weight: 500;
                             line-height: 1;
-                        ">👋🏻 Welcome, {username}!</h1>
+                        ">👋🏻 Welcome, {st.session_state.username}!</h1>
                         <p style="
                             color: #ff8934;
                             margin: 0;
@@ -869,7 +951,7 @@ if st.session_state.username_selected:
                     style="
                         background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFF 100%);
                         padding: 1.5rem;
-                        border-radius: 6px;
+                        border-radius: 5px;
                         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
                     "
                 """
@@ -1297,6 +1379,121 @@ if st.session_state.username_selected:
                     }
                 )
                 
+                # Add spacing after charts
+                st.markdown("<br>", unsafe_allow_html=True)
+
+                # Create two columns for the tables
+                col1, col2 = st.columns(2)
+
+                # Prepare the data for both tables
+                table_columns = ['card_name', 'card_set', 'efficient_price', 'price_diff_d7']
+                display_columns = ['Rank', 'Card Name', 'Set', 'Price', '7d Change']
+
+                def format_price_diff(value):
+                    """Format price difference with color based on value"""
+                    if pd.isna(value) or value is None:
+                        return "N/A"
+                    
+                    percentage = value * 100
+                    color = '#fab900'  # Default color (0%)
+                    if percentage > 0:
+                        color = '#00a195'  # Positive
+                    elif percentage < 0:
+                        color = '#e9536f'  # Negative
+                    
+                    return f'<span style="color: {color}">{percentage:.1f}%</span>'
+
+                # Reserved List Cards (Left table)
+                with col1:
+                    st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Top 10 Reserved List Cards</h3>', unsafe_allow_html=True)
+                    
+                    # Filter and sort reserved list cards
+                    rl_cards = df[df['reserved_list'] == 'Yes'].sort_values('efficient_price', ascending=False)
+                    top_10_rl = rl_cards[table_columns].head(10).copy()
+                    
+                    # Add rank and format columns
+                    top_10_rl.insert(0, 'rank', range(1, len(top_10_rl) + 1))
+                    top_10_rl['efficient_price'] = top_10_rl['efficient_price'].apply(lambda x: f"€{x:,.2f}")
+                    top_10_rl['price_diff_d7'] = top_10_rl['price_diff_d7'].apply(format_price_diff)
+                    
+                    # Rename columns for display
+                    top_10_rl.columns = display_columns
+                    
+                    # Display table with styling
+                    st.markdown(
+                        top_10_rl.to_html(index=False, escape=False),
+                        unsafe_allow_html=True
+                    )
+
+                # Non-Reserved List Cards (Right table)
+                with col2:
+                    st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Top 10 Non-Reserved List Cards</h3>', unsafe_allow_html=True)
+                    
+                    # Filter and sort non-reserved list cards
+                    non_rl_cards = df[df['reserved_list'] == 'No'].sort_values('efficient_price', ascending=False)
+                    top_10_non_rl = non_rl_cards[table_columns].head(10).copy()
+                    
+                    # Add rank and format columns
+                    top_10_non_rl.insert(0, 'rank', range(1, len(top_10_non_rl) + 1))
+                    top_10_non_rl['efficient_price'] = top_10_non_rl['efficient_price'].apply(lambda x: f"€{x:,.2f}")
+                    top_10_non_rl['price_diff_d7'] = top_10_non_rl['price_diff_d7'].apply(format_price_diff)
+                    
+                    # Rename columns for display
+                    top_10_non_rl.columns = display_columns
+                    
+                    # Display table with styling
+                    st.markdown(
+                        top_10_non_rl.to_html(index=False, escape=False),
+                        unsafe_allow_html=True
+                    )
+
+                # Add CSS for table styling (simplified, removed color-related CSS)
+                st.markdown("""
+                    <style>
+                    /* Table styling */
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin: 0;
+                        background: #202020;
+                        border-radius: 4px;
+                        overflow: hidden;
+                        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+                    }
+                    
+                    th {
+                        background: #1f2335 !important;
+                        padding: 12px 16px !important;
+                        font-weight: 600 !important;
+                        color: #ff8934 !important;
+                        text-align: left !important;
+                        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                    }
+                    
+                    td {
+                        padding: 12px 16px !important;
+                        color: #c0caf5 !important;
+                        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                    }
+                    
+                    /* Rank column styling */
+                    td:first-child {
+                        font-weight: 600;
+                        color: #404253 !important;
+                    }
+                    
+                    /* Price change column styling */
+                    td:last-child {
+                        font-weight: 500;
+                    }
+                    
+                    /* Hover effect on rows */
+                    tr:hover td {
+                        background: #292e42;
+                    }
+                    </style>
+                """, unsafe_allow_html=True)
+
             with tab3:
                 # Create two columns for dimensions and metrics
                 col1, col2 = st.columns(2)
@@ -1334,24 +1531,25 @@ if st.session_state.username_selected:
                 # Format the DataFrame for display
                 display_df = df.copy()
                 
-                # Format price columns with currency symbol
+                # Define price-related columns
                 price_columns = [
                     'trend_price', 'efficient_price', 'conservative_price', 
                     'from_price', 'value_price', 'purchase_price', 'listed_price',
                     'total_efficient_value', 'total_conservative_value'
                 ]
                 
-                # Format percentage columns
+                # Define percentage columns
                 percentage_columns = [
                     'price_growth', 'equity_in_country', 'equity_on_cardmarket', 'price_diff_d7'
                 ]
                 
-                # Format prices
+                # Convert price columns to float before display
                 for col in price_columns:
                     if col in display_df.columns:
-                        display_df[col] = display_df[col].apply(lambda x: format_price(x) if x is not None else None)
+                        # Keep the original numeric values instead of formatting them
+                        display_df[col] = pd.to_numeric(display_df[col], errors='coerce')
                 
-                # Format percentages
+                # Format percentage columns
                 for col in percentage_columns:
                     if col in display_df.columns:
                         # Convert NaN to None before formatting
@@ -1366,7 +1564,27 @@ if st.session_state.username_selected:
                     display_columns = [COLUMN_NAMES.get(col, col.replace('_', ' ').title()) for col in selected_columns]
                     df_display = display_df[display_columns].copy()
                     
-                    # Configure grid options
+                    # Transform Alerts column
+                    if 'Alerts' in df_display.columns:
+                        def transform_alerts(value):
+                            if pd.isna(value) or value is None:
+                                return None
+                            # Convert to string to handle all cases
+                            value = str(value)
+                            # Handle L and U cases first
+                            if value == 'L':
+                                return 'Listed'
+                            if value == 'U':
+                                return 'Urgent'
+                            # Remove € sign and try to convert to integer
+                            try:
+                                cleaned_value = value.replace('€', '').strip()
+                                return str(int(float(cleaned_value)))
+                            except Exception:
+                                return value
+                        
+                        df_display['Alerts'] = df_display['Alerts'].apply(transform_alerts)
+                    
                     gb = GridOptionsBuilder.from_dataframe(df_display)
                     
                     # Set default column properties
@@ -1423,6 +1641,38 @@ if st.session_state.username_selected:
                                 }
                             )
 
+                    # Add this specific configuration for the Alerts column
+                    if 'Alerts' in df_display.columns:
+                        alerts_cell_style = JsCode("""
+                        function(params) {
+                            if (params.value === null || params.value === undefined) return {};
+                            if (params.value === 'Listed') return { color: '#6d6ed1' };
+                            if (params.value === 'Urgent') return { color: '#5b50c1' };
+                            const val = parseInt(params.value);
+                            if (isNaN(val)) return {};
+                            const colors = {
+                                0: '#ffffff',
+                                1: '#ffd4d4',
+                                2: '#ffb3b3',
+                                3: '#ff8080',
+                                4: '#ff4d4d',
+                                5: '#e9536f'
+                            };
+                            return { color: colors[val] || '#ffffff' };
+                        }
+                        """)
+                        
+                        gb.configure_column(
+                            'Alerts',
+                            type=["textColumn", "textColumnFilter"],
+                            filter=True,
+                            filterParams={
+                                'buttons': ['reset', 'apply'],
+                                'closeOnApply': True
+                            },
+                            cellStyle=alerts_cell_style
+                        )
+
                     # Add additional grid options
                     grid_options = gb.build()
                     grid_options['enableRangeSelection'] = True
@@ -1468,37 +1718,9 @@ if st.session_state.username_selected:
         st.error(f"Error loading data: {str(e)}")
 else:
 
-    # Display the intro text
-    st.info("""
-    📈 Welcome to KitsuneMTG, your intelligent MTG Portfolio Tracker!
-
-    This dashboard provides insights into your Magic: The Gathering collection, helping you make informed decisions about your cards.
-
-    All data is synchronized with Cardmarket to ensure you have up-to-date information for your collection. Use the tabs above to navigate through different views and discover the full potential of your MTG portfolio.
-            
-    Enter your username to get started! 🎉
-    """)
-
     # Add social media links with logos
     assets_path = os.path.join(os.path.dirname(__file__), 'assets')
 
-
-
-# Footer
-# Replace the text with the image
-logo_path = os.path.join(assets_path, 'Alpha_Logo.png')
-with open(logo_path, "rb") as f:
-    logo_contents = f.read()
-logo_encoded = base64.b64encode(logo_contents).decode()
-
-st.sidebar.markdown(
-    f"""
-    <div style="display: flex; justify-content: center; padding: 10px; margin-top: auto;">
-        <img src="data:image/png;base64,{logo_encoded}" style="width: 100px; height: auto;">
-    </div>
-    """,
-    unsafe_allow_html=True
-)
 
 # Add this function at the top of your file
 def get_base64_of_bin_file(bin_file):
@@ -1673,6 +1895,161 @@ st.markdown("""
         line-height: 1.2 !important;
         white-space: normal !important;
         word-wrap: break-word !important;
+    }
+    </style>
+""", unsafe_allow_html=True) 
+
+# Add this CSS for login form styling
+st.markdown("""
+    <style>
+    /* Login button specific styling */
+    [data-testid="stForm"] .stButton > button {
+        color: #ffffff !important;
+        border-color: #03a088 !important;
+        background-color: #03a088 !important;
+    }
+    
+    [data-testid="stForm"] .stButton > button:hover {
+        background-color: #028474 !important;
+    }
+    
+    /* Password toggle button specific styling - exclude it from login button styling */
+    [data-testid="stForm"] button[aria-label="Toggle password visibility"],
+    [data-testid="stForm"] button[aria-label="Toggle password visibility"] svg,
+    [data-testid="stForm"] button[aria-label="Toggle password visibility"] path {
+        background: transparent !important;
+        border: none !important;
+        color: rgba(255, 255, 255, 0.5) !important;
+        fill: rgba(255, 255, 255, 0.5) !important;
+        stroke: rgba(255, 255, 255, 0.5) !important;
+    }
+    
+    /* Hover states for password toggle */
+    [data-testid="stForm"] button[aria-label="Toggle password visibility"]:hover,
+    [data-testid="stForm"] button[aria-label="Toggle password visibility"]:hover svg,
+    [data-testid="stForm"] button[aria-label="Toggle password visibility"]:hover path {
+        background: transparent !important;
+        color: rgba(255, 255, 255, 0.8) !important;
+        fill: rgba(255, 255, 255, 0.8) !important;
+        stroke: rgba(255, 255, 255, 0.8) !important;
+    }
+    
+    /* Remove any button styling from password toggle */
+    [data-testid="stForm"] button[aria-label="Toggle password visibility"] {
+        border: none !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background-color: transparent !important;
+    }
+    </style>
+""", unsafe_allow_html=True) 
+
+# Add this CSS to force hide the sidebar and its toggle button
+st.markdown("""
+    <style>
+    /* Hide sidebar */
+    section[data-testid="stSidebar"] {
+        display: none !important;
+    }
+    
+    /* Hide sidebar toggle button */
+    button[kind="header"] {
+        display: none !important;
+    }
+    
+    /* Adjust main content to take full width */
+    .main .block-container {
+        max-width: 100% !important;
+        padding-left: 5% !important;
+        padding-right: 5% !important;
+        padding-top: 1rem !important;
+    }
+    
+    /* Hide any remaining sidebar elements */
+    .st-emotion-cache-16idsys {
+        display: none !important;
+    }
+    
+    /* Remove sidebar transition effects */
+    @media (width: 0) {
+        section[data-testid="stSidebar"] {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            visibility: hidden !important;
+            transform: none !important;
+            transition: none !important;
+        }
+    }
+    </style>
+""", unsafe_allow_html=True) 
+
+st.markdown("""
+    <style>
+    /* Info box styling */
+    .stAlert {
+        max-width: 600px !important;  /* Reduced from 800px */
+        margin: 2rem auto !important;
+        background-color: #202020 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 5px !important;
+    }
+    
+    /* Style for info icon */
+    .stAlert [data-testid="stInfoBadge"] {
+        background-color: transparent !important;
+        color: #03a088 !important;
+    }
+    
+    /* Style for info text */
+    .stAlert > div {
+        color: #ffffff !important;
+    }
+    
+    /* Style for Twitter link */
+    .stAlert a {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .stAlert a:hover {
+        color: #03a088 !important;
+    }
+    </style>
+""", unsafe_allow_html=True) 
+
+st.markdown("""
+    <style>
+    /* Target the password toggle icon and its SVG specifically */
+    [data-testid="stForm"] button[aria-label="Toggle password visibility"],
+    [data-testid="stForm"] button[aria-label="Toggle password visibility"] svg,
+    [data-testid="stForm"] button[aria-label="Toggle password visibility"] path {
+        background: transparent !important;
+        border: none !important;
+        color: rgba(255, 255, 255, 0.5) !important;
+        fill: rgba(255, 255, 255, 0.5) !important;
+        stroke: rgba(255, 255, 255, 0.5) !important;
+    }
+    
+    /* Hover states */
+    [data-testid="stForm"] button[aria-label="Toggle password visibility"]:hover,
+    [data-testid="stForm"] button[aria-label="Toggle password visibility"]:hover svg,
+    [data-testid="stForm"] button[aria-label="Toggle password visibility"]:hover path {
+        background: transparent !important;
+        color: rgba(255, 255, 255, 0.8) !important;
+        fill: rgba(255, 255, 255, 0.8) !important;
+        stroke: rgba(255, 255, 255, 0.8) !important;
+    }
+    
+    /* Remove any button styling */
+    [data-testid="stForm"] button[aria-label="Toggle password visibility"] {
+        border: none !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
     </style>
 """, unsafe_allow_html=True) 

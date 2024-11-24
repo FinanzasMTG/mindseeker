@@ -10,9 +10,25 @@ import numpy as np
 import time
 from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 from st_aggrid.grid_options_builder import GridOptionsBuilder
+import random
 
 # Load environment variables
 load_dotenv()
+
+# Add this near the top of your file with other constants
+TRIVIAS = [
+    "Your journey to mastering your inventory begins here!",
+    # "The *Reserved List* guarantees that certain MTG cards will never be reprinted, making them highly sought-after by collectors and investors.",
+    # "The most expensive MTG card ever sold, a *Black Lotus* (1993), fetched over $500,000 at auction in 2021 due to its rarity and iconic status.",
+    # "Many cards on the Reserved List have increased in value by over 1,000% since their release, proving their status as valuable assets.",
+    # "The Reserved List was introduced in 1996 to appease collectors after concerns over reprints affecting card values.",
+    # "MTG cards are considered \"alternative investments,\" similar to fine art or rare coins, due to their strong secondary market.",
+    # "Some Reserved List cards, like *The Tabernacle at Pendrell Vale*, are valued at thousands of pounds due to their scarcity and playability.",
+    # "MTG's secondary market is estimated to be worth over $1 billion, with Reserved List cards playing a major role in its value.",
+    # "Reserved List cards often see spikes in value when new formats or synergies make them more desirable for gameplay.",
+    # "High-grade *Alpha* and *Beta* cards from MTG's earliest sets command premium prices, especially if they are on the Reserved List.",
+    # "Collectors often grade Reserved List cards through services like PSA or BGS, with top-tier grades significantly boosting their market value."
+]
 
 # Page config and styling
 st.set_page_config(
@@ -31,8 +47,67 @@ app_logo_encoded = base64.b64encode(app_logo_contents).decode()
 # Modern dashboard CSS inspired by Nova design
 st.markdown("""
     <style>
+    /* Import Raleway font */
+    @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700&display=swap');
+    
+    /* Global font settings */
+    :root {
+        --font-family: 'Raleway', sans-serif !important;
+    }
+    
+    /* Universal selector */
+    *, 
+    *::before, 
+    *::after {
+        font-family: 'Raleway', sans-serif !important;
+    }
+    
+    /* Streamlit specific elements */
+    .element-container, 
+    .stMarkdown, 
+    .stButton > button,
+    .stSelectbox,
+    .stMultiSelect,
+    .stTextInput > div,
+    div[data-testid="stMetricValue"],
+    div[data-testid="stMetricLabel"],
+    .dataframe,
+    .category-header,
+    .category-header-tab3,
+    h1, h2, h3, h4, h5, h6,
+    p,
+    span,
+    div,
+    button,
+    input,
+    select,
+    textarea,
+    .stTabs [data-baseweb="tab"],
+    .stAlert > div,
+    [data-testid="stForm"] input,
+    [data-baseweb="select"] *,
+    [data-baseweb="input"] *,
+    [data-baseweb="textarea"] * {
+        font-family: 'Raleway', sans-serif !important;
+    }
+    
+    /* AG Grid specific */
+    .ag-theme-streamlit,
+    .ag-theme-streamlit .ag-header-cell,
+    .ag-theme-streamlit .ag-cell {
+        font-family: 'Raleway', sans-serif !important;
+    }
+    
+    /* Plotly specific */
+    .js-plotly-plot .plotly text,
+    .js-plotly-plot .plotly .ytick text,
+    .js-plotly-plot .plotly .xtick text {
+        font-family: 'Raleway', sans-serif !important;
+    }
+    
     /* Main container with background image */
     .main {
+        font-family: 'Raleway', sans-serif !important;
         background-image: url("app_bg.png");
         background-size: cover;
         background-position: center;
@@ -92,8 +167,8 @@ st.markdown("""
         color: #03a088 !important;
         font-weight: 600 !important;
         font-size: 1rem !important;
-        margin-bottom: -20px !important;
-        margin-top: 20px !important;
+        margin-bottom: -100px !important;
+        margin-top: 10px !important;
         padding: 0 !important;
     }
     
@@ -158,7 +233,7 @@ st.markdown("""
         font-size: 28px;
         font-weight: 600;
         color: #c0caf5;
-        margin-bottom: 24px;
+        margin-bottom: 10px;
     }
     
     /* Metrics Cards */
@@ -170,6 +245,7 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.1);
         transition: background 0.3s ease;
         color: #FFFFFF !important;
+        font-size: 18px;  /* Adjust this value to change the metric value size */
     }
     
     div[data-testid="stMetricValue"] > div {
@@ -183,7 +259,7 @@ st.markdown("""
     
     /* Metric Labels */
     div[data-testid="stMetricLabel"] {
-        font-size: 14px;
+        font-size: 14px;  /* Adjust this value to change the label size */
         color: #7aa2f7 !important;
     }
     
@@ -201,7 +277,7 @@ st.markdown("""
     /* Tabs */
     .stTabs [data-baseweb="tab-list"] {
         gap: 2px;
-        background: #202020;
+        background: #202020 !important;
         padding: 6px;
         border-radius: 3px;
     }
@@ -213,6 +289,12 @@ st.markdown("""
         background: transparent;
         color: #ffffff;
         border-bottom: none !important;
+        transition: all 0.3s ease;  /* Smooth transition for hover effects */
+    }
+    
+    .stTabs [data-baseweb="tab"]:hover {
+        color: #00a195;
+        text-shadow: 0 0 15px rgba(0, 161, 149, 0.8);  /* Bigger, more intense glow effect */
     }
     
     .stTabs [data-baseweb="tab"][aria-selected="true"] {
@@ -323,37 +405,41 @@ st.markdown("""
     
     /* Loading state styling */
     .stSpinner {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: rgba(31, 35, 53, 0.3);
-        backdrop-filter: blur(8px);
-        z-index: 1000;
-        display: flex;
-        justify-content: center;
-        align-items: center;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background-color: rgba(31, 35, 53, 0.7) !important;
+        backdrop-filter: blur(8px) !important;
+        z-index: 9999 !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
     }
     
     /* Make container cover full screen */
     .stSpinner > div {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
         background: transparent !important;
-        display: flex;
-        justify-content: center;
-        align-items: center;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
         margin: 0 !important;
         padding: 0 !important;
     }
     
     /* Hide the loading text */
     .stSpinner > div > div:last-child {
-        display: none;
+        display: none !important;
     }
     
     /* Make spinner bigger and white */
@@ -910,7 +996,19 @@ if st.session_state.username_selected and st.session_state.username:
         else:
             # Clean welcome header with date
             max_date = pd.to_datetime(df['date']).max().strftime('%d/%m/%Y')
-            st.markdown(f"""
+            # First, add the CSS style
+            st.markdown("""
+                <style>
+                @media screen and (max-width: 768px) {
+                    .welcome-text {
+                        display: none !important;
+                    }
+                }
+                </style>
+            """, unsafe_allow_html=True)
+
+            # Then, add the content with f-string
+            welcome_text = f"""
                 <div style="
                     display: flex;
                     justify-content: space-between;
@@ -918,27 +1016,36 @@ if st.session_state.username_selected and st.session_state.username:
                     margin-bottom: 2rem;
                     padding: 1rem 0;
                 ">
-                    <div>
+                    <div class="welcome-text">
                         <h1 style="
                             color: #ffffff;
                             margin: 0;
                             padding: 0;
-                            font-size: 32px;
+                            font-size: 26px;
                             font-weight: 500;
                             line-height: 1;
                         ">👋🏻 Welcome, {st.session_state.username}!</h1>
                         <p style="
-                            color: #ff8934;
+                            color: #dddddd;
                             margin: 0;
                             padding: 0;
-                            font-size: 16px;
+                            font-size: 14px;
                             line-height: 1.5;
-                        ">Data from Cardmarket as of {max_date}</p>
+                            text-align: right;
+                        ">{random.choice(TRIVIAS)}</p>
                     </div>
                     <img src="data:image/png;base64,{app_logo_encoded}" style="width: 400px; height: auto;">
                 </div>
-            """, unsafe_allow_html=True)
-            
+            """
+            st.markdown(welcome_text, unsafe_allow_html=True)
+            st.markdown(f'''<p style="
+                            color: #ff8934;
+                            margin: 0;
+                            padding: 0;
+                            font-size: 12px;
+                            line-height: 1.5;
+                            text-align: right;
+                        ">Data from Cardmarket as of {max_date}</p>''', unsafe_allow_html=True)
             
             # Tabs for different views
             tab1, tab2, tab3 = st.tabs(["Portfolio Overview", "Price Analysis", "Inventory Details"])
@@ -961,16 +1068,16 @@ if st.session_state.username_selected and st.session_state.username:
                     st.metric("Total Cards", f"{total_cards:,.0f}")
                 
                 with col2:
+                    unique_cards = f"{len(df):,.0f}"
+                    st.metric("Unique Cards", unique_cards)
+
+                with col3:
                     total_value = df['total_efficient_value'].sum()
                     st.metric("Portfolio Value", f"€{total_value:,.2f}")
                 
-                with col3:
+                with col4:
                     avg_price = df['efficient_price'].mean()
                     st.metric("Average Price", f"€{avg_price:.2f}")
-                
-                with col4:
-                    unique_cards = f"{len(df):,.0f}"
-                    st.metric("Unique Cards", unique_cards)
                     
                 with col5:
                     max_price_diff_d7 = df['price_diff_d7'].max()
@@ -1236,6 +1343,12 @@ if st.session_state.username_selected and st.session_state.username:
                     nbins=5000,
                     labels={'efficient_price': 'Card Price (€)', 'count': 'Number of Cards'}
                 )
+
+                fig_price.update_traces(
+                    marker_color='#9b8ac1',  # Main color for bars
+                    marker_line_color='#9b8ac1',  # Border color for bars
+                    marker_line_width=3  # Border width
+                )
                 
                 # Update histogram layout with explicit y-axis title
                 fig_price.update_layout(
@@ -1315,7 +1428,7 @@ if st.session_state.username_selected and st.session_state.username:
                     with container:
                         selected_metric = st.selectbox(
                             "Select Price Metric",
-                            ["Price Growth", "Today vs D7"],
+                            ["Today vs D7", "Price Growth"],
                             key="price_metric_selector",
                             label_visibility="collapsed"
                         )
@@ -1364,6 +1477,17 @@ if st.session_state.username_selected and st.session_state.username:
                     )
                 )
                 
+                fig_growth.update_traces(
+                    marker=dict(
+                        color='#9b8ac1',  # Dot color
+                        size=8,  # Dot size
+                        opacity=1,  # Dot opacity
+                        line=dict(
+                            color='#9b8ac1',  # Dot border color
+                            width=0  # Dot border width
+                        )
+                    ))
+                
                 st.plotly_chart(
                     fig_growth, 
                     use_container_width=True,
@@ -1378,6 +1502,7 @@ if st.session_state.username_selected and st.session_state.username:
                         }
                     }
                 )
+                
                 
                 # Add spacing after charts
                 st.markdown("<br>", unsafe_allow_html=True)
@@ -1458,6 +1583,7 @@ if st.session_state.username_selected and st.session_state.username:
                         background: #202020;
                         border-radius: 4px;
                         overflow: hidden;
+                        font-size: 12px;
                         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
                     }
                     
@@ -1465,21 +1591,21 @@ if st.session_state.username_selected and st.session_state.username:
                         background: #1f2335 !important;
                         padding: 12px 16px !important;
                         font-weight: 600 !important;
-                        color: #ff8934 !important;
+                        color: #03a088 !important;
                         text-align: left !important;
                         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
                     }
                     
                     td {
                         padding: 12px 16px !important;
-                        color: #c0caf5 !important;
+                        color: #ffffff !important;
                         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
                     }
                     
                     /* Rank column styling */
                     td:first-child {
-                        font-weight: 600;
-                        color: #404253 !important;
+                        font-weight: 700;
+                        color: #c1c1c1 !important;
                     }
                     
                     /* Price change column styling */
@@ -1891,7 +2017,7 @@ st.markdown("""
     <style>
     /* Regular metrics styling */
     div[data-testid="stMetricValue"] > div {
-        font-size: 30px !important;
+        font-size: 22px !important;
         line-height: 1.2 !important;
         white-space: normal !important;
         word-wrap: break-word !important;
@@ -2053,3 +2179,224 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True) 
+
+# Add this CSS before any other CSS blocks
+st.markdown("""
+    <style>
+    /* Import Raleway font */
+    @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700&display=swap');
+    
+    /* Apply Raleway to all elements */
+    * {
+        font-family: 'Raleway', sans-serif !important;
+    }
+    
+    /* Specific element overrides */
+    .stMarkdown,
+    .stButton > button,
+    .stSelectbox,
+    .stMultiSelect,
+    .stTextInput > div,
+    div[data-testid="stMetricValue"],
+    div[data-testid="stMetricLabel"],
+    .dataframe,
+    .category-header,
+    .category-header-tab3,
+    h1, h2, h3, h4, h5, h6,
+    p,
+    .stTabs [data-baseweb="tab"],
+    .stAlert > div,
+    [data-testid="stForm"] input {
+        font-family: 'Raleway', sans-serif !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Add custom CSS for alignment and dropdown width
+st.markdown("""
+    <style>
+    .metric-label {
+        margin-top: 12px;
+        color: #ffffff;
+        text-align: right;
+        padding-right: 15px;
+        font-size: 14px;
+    }
+    
+    /* Force wider select box */
+    [data-testid="stSelectbox"] {
+        width: 300px !important;  /* Increased fixed width */
+    }
+    
+    /* Override all nested select elements */
+    [data-testid="stSelectbox"] > div,
+    [data-testid="stSelectbox"] > div > div,
+    [data-testid="stSelectbox"] div[data-baseweb="select"],
+    [data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+    [data-testid="stSelectbox"] div[data-baseweb="select"] span,
+    [data-testid="stSelectbox"] div[role="combobox"] {
+        min-width: 200px !important;
+        max-width: 300px !important;
+    }
+    
+    /* Prevent text truncation */
+    [data-testid="stSelectbox"] span {
+        max-width: none !important;
+        white-space: normal !important;
+        text-overflow: unset !important;
+        overflow: visible !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Add custom CSS specifically for the price metric selector
+st.markdown("""
+    <style>
+    /* Target the select container and all its children */
+    [data-testid="stSelectbox"]:has(select#price_metric_selector),
+    [data-testid="stSelectbox"]:has(select#price_metric_selector) *,
+    div:has(> select#price_metric_selector),
+    div:has(> select#price_metric_selector) * {
+        font-size: 10px !important;
+    }
+
+    /* Target the actual select element */
+    select#price_metric_selector {
+        font-size: 10px !important;
+    }
+
+    /* Target the dropdown options */
+    select#price_metric_selector option {
+        font-size: 10px !important;
+    }
+
+    /* Additional specificity for BaseWeb components */
+    [data-baseweb="select"]:has(input[id*="price_metric_selector"]),
+    [data-baseweb="select"]:has(input[id*="price_metric_selector"]) * {
+        font-size: 10px !important;
+    }
+
+    /* Target the popover/dropdown menu */
+    [data-baseweb="popover"],
+    [data-baseweb="popover"] * {
+        font-size: 10px !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Add this CSS block after your existing multiselect styling
+st.markdown("""
+    <style>
+    /* Style for selected tags in multiselect */
+    .stMultiSelect [data-baseweb="tag"] {
+        background-color: #03a088 !important;
+        border-radius: 4px;
+        margin: 2px;
+        font-size: 12px !important;  /* Set font size for selected items */
+    }
+    
+    /* Style for the text inside tags */
+    .stMultiSelect [data-baseweb="tag"] span {
+        font-size: 12px !important;
+    }
+    
+    /* Style for the remove (x) button in tags */
+    .stMultiSelect [data-baseweb="tag"] button {
+        font-size: 12px !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Add this CSS to prevent text truncation in the selectbox
+st.markdown("""
+    <style>
+    /* Prevent text truncation in selectbox */
+    [data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child,
+    [data-testid="stSelectbox"] div[data-baseweb="select"] > div > div {
+        width: auto !important;
+        min-width: 100% !important;
+        font-size: 14px !important;  /* Set font size for label */
+    }
+    
+    [data-testid="stSelectbox"] div[data-baseweb="select"] span,
+    [data-testid="stSelectbox"] div[data-baseweb="select"] div[aria-selected="true"] {
+        width: auto !important;
+        max-width: none !important;
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        font-size: 14px !important;  /* Set font size for selected value */
+    }
+    
+    /* Ensure the container and all nested elements use available space */
+    [data-testid="stSelectbox"] > div,
+    [data-testid="stSelectbox"] [data-baseweb="select"],
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+        width: 100% !important;
+        position: relative !important;
+    }
+    
+    /* Target the label specifically */
+    [data-testid="stSelectbox"] [data-baseweb="select"] [role="option"] {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        font-size: 14px !important;  /* Set font size for dropdown options */
+    }
+
+    /* Keep the default arrow styling */
+    [data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+        padding-right: 24px !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Create columns with specific widths
+label_col, dropdown_col = st.columns([0.8, 1])
+
+# Add or update this CSS
+st.markdown("""
+    <style>
+    /* Headers */
+    h3 {
+        font-size: 24px;
+        font-weight: 600;
+        color: #03a088;
+        margin-bottom: 2px !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Add or update the tabs styling CSS
+st.markdown("""
+    <style>
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 2px;
+        background: #202020;
+        padding: 6px;
+        border-radius: 3px;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 3px;
+        padding: 12px 24px;
+        font-weight: 500;
+        background: transparent;
+        color: #ffffff;
+        border-bottom: none !important;
+        transition: all 0.3s ease;  /* Smooth transition for hover effects */
+    }
+    
+    .stTabs [data-baseweb="tab"]:hover {
+        color: #00a195;
+        text-shadow: 0 0 15px rgba(0, 161, 149, 0.8);  /* Changed to teal color */
+    }
+    
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background: #202020;
+        color: #03a088;
+        box-shadow: none;
+    }
+    </style>
+""", unsafe_allow_html=True)

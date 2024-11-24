@@ -724,15 +724,15 @@ def get_user_sheet_id(username):
         raise ValueError("MTG input file column not found in setup sheet")
 
 def clean_price(value):
-    """Clean price values by removing currency symbols and converting to float"""
+    """Clean price values and return with thousand separator"""
     if pd.isna(value) or value == 'N/A':
         return None
     if isinstance(value, (int, float)):
-        return value
+        return f"{value:,.2f}"  # Format with thousand separator
     try:
         # Remove currency symbols and spaces
         cleaned = str(value).replace('€', '').replace('£', '').replace('$', '').replace(',', '').strip()
-        return float(cleaned)
+        return f"{float(cleaned):,.2f}"  # Format with thousand separator
     except:
         return None
 
@@ -1736,6 +1736,14 @@ if st.session_state.username_selected and st.session_state.username:
                                     'closeOnApply': True
                                 }
                             )
+    
+                        elif col in ['From Price', 'Trend Price in €', 'MS Trend Price in €', 'Efficient Price in €', 'Conservative Price in €', 'Value Price in €', 'Purchase Price in €', 'Cardmarket Listed Price in €', 'Listed Price in €']:
+                            # Make Card Name column wider
+                            gb.configure_column(
+                                col,
+                                valueFormatter="'€' + x.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2})"
+                            )
+
                         elif col in ['Today vs D7', 'Price Growth', 'Equity in Country', 'Equity on Cardmarket']:
                             cellStyle = JsCode("""
                             function(params) {

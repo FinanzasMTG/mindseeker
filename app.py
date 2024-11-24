@@ -76,7 +76,7 @@ st.markdown("""
     
     /* Dropdown menu styling */
     [data-baseweb="menu"] {
-        background: #24283b !important;
+        background: #202020 !important;
     }
     
     /* Category headers */
@@ -106,7 +106,7 @@ st.markdown("""
     
     /* Style for the dropdown menu */
     [data-baseweb="popover"] {
-        background: #24283b !important;
+        background: #202020 !important;
     }
     
     [data-baseweb="select"] {
@@ -130,7 +130,7 @@ st.markdown("""
     
     /* Style for the dropdown list */
     [data-baseweb="menu"] {
-        background: #24283b !important;
+        background: #202020 !important;
     }
     
     /* Category headers */
@@ -163,9 +163,9 @@ st.markdown("""
     
     /* Metrics Cards */
     div[data-testid="stMetricValue"] {
-        background: #24283b;
+        background: #202020;
         padding: 1.5rem;
-        border-radius: 16px;
+        border-radius: 4px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
         border: 1px solid rgba(255, 255, 255, 0.1);
         transition: background 0.3s ease;
@@ -177,7 +177,7 @@ st.markdown("""
     }
     
     div[data-testid="stMetricValue"]:hover {
-        background: linear-gradient(to bottom, #24283b 0%, #24283b 65%, #004137 100%);
+        background: linear-gradient(to bottom, #202020 0%, #202020 65%, #004137 100%);
         border: 1px solid #03a088;
     }
     
@@ -189,7 +189,7 @@ st.markdown("""
     
     /* Sidebar */
     section[data-testid="stSidebar"] {
-        background: #24283b;
+        background: #202020;
         border-right: 1px solid rgba(255, 255, 255, 0.1);
         padding: 2rem 1rem;
     }
@@ -201,22 +201,22 @@ st.markdown("""
     /* Tabs */
     .stTabs [data-baseweb="tab-list"] {
         gap: 2px;
-        background: #1f2335;
+        background: #202020;
         padding: 6px;
-        border-radius: 12px;
+        border-radius: 3px;
     }
     
     .stTabs [data-baseweb="tab"] {
-        border-radius: 10px;
+        border-radius: 3px;
         padding: 12px 24px;
         font-weight: 500;
         background: transparent;
-        color: #a9b1d6;
+        color: #ffffff;
         border-bottom: none !important;
     }
     
     .stTabs [data-baseweb="tab"][aria-selected="true"] {
-        background: #24283b;
+        background: #202020;
         color: #03a088;
         box-shadow: none;
     }
@@ -239,9 +239,9 @@ st.markdown("""
     /* DataFrames */
     .dataframe {
         border: none !important;
-        border-radius: 12px;
+        border-radius: 4px;
         overflow: hidden;
-        background: #24283b;
+        background: #202020;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     }
     
@@ -261,16 +261,16 @@ st.markdown("""
     
     /* Plotly Charts */
     .js-plotly-plot {
-        background: #24283b;
-        border-radius: 14px;
+        background: #202020;
+        border-radius: 4px;
         padding: 20px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     }
     
     /* Multiselect */
     .stMultiSelect {
-        background: #24283b;
-        border-radius: 8px;
+        background: #202020;
+        border-radius: 4px;
         border: 1px solid rgba(255, 255, 255, 0.1);
         color: #c0caf5;
     }
@@ -665,7 +665,7 @@ def format_percentage(value):
         value_float = float(value)
         # Only format if the value is not 0
         if value_float != 0:
-            return f"{value_float * 100:.0f}%"
+            return f"{value_float * 100:,.0f}%"
         else:
             return "0%"
     except (ValueError, TypeError):
@@ -780,28 +780,31 @@ with st.sidebar:
         </div>
     """, unsafe_allow_html=True)
 
-    username = st.text_input("Enter your username:")
-    password = st.text_input("Enter your password:", type="password")
-    
-    if st.button("Enter"):
-        if verify_credentials(username, password):
-            st.session_state.username = username
-            st.session_state.username_selected = True
-            # Add CSS class to hide sidebar
-            st.markdown("""
-                <style>
-                [data-testid="stSidebar"] {
-                    display: none;
-                }
-                .main .block-container {
-                    padding-left: 5% !important;
-                    padding-right: 5% !important;
-                }
-                </style>
-            """, unsafe_allow_html=True)
-            st.rerun()
-        else:
-            st.error("Invalid username or password")
+    # Create a form to handle Enter key submission
+    with st.form("login_form"):
+        username = st.text_input("Enter your username:")
+        password = st.text_input("Enter your password:", type="password")
+        submit_button = st.form_submit_button("Login")
+        
+        if submit_button:
+            if verify_credentials(username, password):
+                st.session_state.username = username
+                st.session_state.username_selected = True
+                # Add CSS class to hide sidebar
+                st.markdown("""
+                    <style>
+                    [data-testid="stSidebar"] {
+                        display: none;
+                    }
+                    .main .block-container {
+                        padding-left: 5% !important;
+                        padding-right: 5% !important;
+                    }
+                    </style>
+                """, unsafe_allow_html=True)
+                st.rerun()
+            else:
+                st.error("Invalid username or password")
 
 if st.session_state.username_selected:
     # Hide sidebar after successful login
@@ -843,7 +846,7 @@ if st.session_state.username_selected:
                             line-height: 1;
                         ">👋🏻 Welcome, {username}!</h1>
                         <p style="
-                            color: #fab900;
+                            color: #ff8934;
                             margin: 0;
                             padding: 0;
                             font-size: 16px;
@@ -854,38 +857,51 @@ if st.session_state.username_selected:
                 </div>
             """, unsafe_allow_html=True)
             
-            # Metrics with improved styling
-            col1, col2, col3, col4 = st.columns(4)
-            
-            metrics_style = """
-                style="
-                    background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFF 100%);
-                    padding: 1.5rem;
-                    border-radius: 16px;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-                "
-            """
-            
-            with col1:
-                total_cards = df['amount'].sum()
-                st.metric("Total Cards", f"{total_cards:,.0f}")
-            
-            with col2:
-                total_value = df['total_efficient_value'].sum()
-                st.metric("Portfolio Value", f"€{total_value:,.2f}")
-            
-            with col3:
-                avg_price = df['efficient_price'].mean()
-                st.metric("Average Price", f"€{avg_price:.2f}")
-            
-            with col4:
-                unique_cards = f"{len(df):,.0f}"
-                st.metric("Unique Cards", unique_cards)
             
             # Tabs for different views
             tab1, tab2, tab3 = st.tabs(["Portfolio Overview", "Price Analysis", "Inventory Details"])
             
             with tab1:
+                st.markdown('<br>', unsafe_allow_html=True)
+                col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 2])
+
+                metrics_style = """
+                    style="
+                        background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFF 100%);
+                        padding: 1.5rem;
+                        border-radius: 6px;
+                        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+                    "
+                """
+                
+                with col1:
+                    total_cards = df['amount'].sum()
+                    st.metric("Total Cards", f"{total_cards:,.0f}")
+                
+                with col2:
+                    total_value = df['total_efficient_value'].sum()
+                    st.metric("Portfolio Value", f"€{total_value:,.2f}")
+                
+                with col3:
+                    avg_price = df['efficient_price'].mean()
+                    st.metric("Average Price", f"€{avg_price:.2f}")
+                
+                with col4:
+                    unique_cards = f"{len(df):,.0f}"
+                    st.metric("Unique Cards", unique_cards)
+                    
+                with col5:
+                    max_price_diff_d7 = df['price_diff_d7'].max()
+                    max_price_diff_d7_card_name = df.loc[df['price_diff_d7'] == max_price_diff_d7, 'card_name'].iloc[0]
+                    st.metric(
+                        "Highest Price Change (7d)", 
+                        f"{max_price_diff_d7_card_name}\n({format_percentage(max_price_diff_d7)})"
+                    )
+
+
+                st.markdown('<br>', unsafe_allow_html=True)    
+                st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Portfolio Overview by Set</h3>', unsafe_allow_html=True)
+
                 # Calculate total portfolio value
                 total_portfolio_value = df['total_efficient_value'].sum()
                 
@@ -1174,9 +1190,9 @@ if st.session_state.username_selected:
                     <style>
                     /* Dropdown container and input */
                     div[data-baseweb="select"] {
-                        background-color: #24283b !important;
+                        background-color: #202020 !important;
                         border: 1px solid rgba(255, 255, 255, 0.1) !important;
-                        border-radius: 8px !important;
+                        border-radius: 4px !important;
                         width: 100% !important;  /* Changed from 200px to 100% */
                         margin-top: 30px;
                     }
@@ -1198,7 +1214,7 @@ if st.session_state.username_selected:
                     
                     /* Dropdown options menu */
                     div[role="listbox"] {
-                        background-color: #24283b !important;
+                        background-color: #202020 !important;
                         border: 1px solid #03a088 !important;
                         width: 100% !important;
                     }
@@ -1352,17 +1368,31 @@ if st.session_state.username_selected:
                     
                     # Configure grid options
                     gb = GridOptionsBuilder.from_dataframe(df_display)
+                    
+                    # Set default column properties
                     gb.configure_default_column(
                         filterable=True,
                         sorteable=True,
                         resizable=True,
-                        filter=True,  # Explicitly enable filters
-                        menuTabs=['filterMenuTab', 'generalMenuTab']  # Show filter and general menu tabs
+                        filter=True,
+                        menuTabs=['filterMenuTab', 'generalMenuTab']
                     )
                     
-                    # Configure column-specific options
+                    # Configure specific columns
                     for col in df_display.columns:
-                        if col in ['Today vs D7', 'Price Growth', 'Equity in Country', 'Equity on Cardmarket']:
+                        if col == 'Card Name':
+                            # Make Card Name column wider
+                            gb.configure_column(
+                                col,
+                                minWidth=300,  # Minimum width in pixels
+                                type=["textColumn", "textColumnFilter"],
+                                filter=True,
+                                filterParams={
+                                    'buttons': ['reset', 'apply'],
+                                    'closeOnApply': True
+                                }
+                            )
+                        elif col in ['Today vs D7', 'Price Growth', 'Equity in Country', 'Equity on Cardmarket']:
                             cellStyle = JsCode("""
                             function(params) {
                                 if (params.value === null || params.value === undefined) return {};
@@ -1401,19 +1431,19 @@ if st.session_state.username_selected:
                     
                     # Custom CSS for AgGrid
                     grid_css = {
-                        ".ag-root.ag-theme-streamlit": {"background-color": "#24283b"},
+                        ".ag-root.ag-theme-streamlit": {"background-color": "#202020"},
                         ".ag-theme-streamlit .ag-header": {"background-color": "#1f2335"},
                         ".ag-theme-streamlit .ag-header-cell": {"color": "#03a088"},
                         ".ag-theme-streamlit .ag-cell": {"color": "#c0caf5"},
-                        ".ag-theme-streamlit .ag-row-even": {"background-color": "#24283b"},
+                        ".ag-theme-streamlit .ag-row-even": {"background-color": "#202020"},
                         ".ag-theme-streamlit .ag-row-odd": {"background-color": "#1f2335"},
                         ".ag-theme-streamlit .ag-row:hover": {"background-color": "#292e42"},
                         ".ag-theme-streamlit .ag-filter-toolpanel-header": {"background-color": "#1f2335", "color": "#03a088"},
-                        ".ag-theme-streamlit .ag-filter": {"background-color": "#24283b"},
+                        ".ag-theme-streamlit .ag-filter": {"background-color": "#202020"},
                         ".ag-theme-streamlit .ag-filter-header": {"background-color": "#1f2335"},
                         ".ag-theme-streamlit .ag-filter-filter": {"background-color": "#1f2335", "color": "#c0caf5", "border-color": "#03a088"},
                         ".ag-theme-streamlit .ag-filter-value": {"background-color": "#1f2335", "color": "#c0caf5", "border-color": "#03a088"},
-                        ".ag-theme-streamlit .ag-menu": {"background-color": "#24283b", "border-color": "#03a088"},
+                        ".ag-theme-streamlit .ag-menu": {"background-color": "#202020", "border-color": "#03a088"},
                         ".ag-theme-streamlit .ag-menu-option": {"color": "#c0caf5"},
                         ".ag-theme-streamlit .ag-menu-option:hover": {"background-color": "#292e42"}
                     }
@@ -1478,7 +1508,7 @@ def get_base64_of_bin_file(bin_file):
 
 def set_bg_image():
     assets_path = os.path.join(os.path.dirname(__file__), 'assets')
-    bg_img_path = os.path.join(assets_path, 'app_bg_logged_in.jpg')
+    bg_img_path = os.path.join(assets_path, 'app_bg.jpg')
     
     bin_str = get_base64_of_bin_file(bg_img_path)
     page_bg_img = f'''
@@ -1518,9 +1548,9 @@ def set_bg_image():
     }}
     
     .stSpinner > div {{
-        background: #24283b;
+        background: #202020;
         padding: 2rem;
-        border-radius: 16px;
+        border-radius: 4px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     }}
     </style>
@@ -1542,7 +1572,7 @@ st.markdown("""
 
     section[data-testid="stSidebar"] > div.st-emotion-cache-16idsys {
         background: #03a088 !important;
-        border-radius: 50% !important;
+        border-radius: 4px !important;
         width: 40px !important;
         height: 40px !important;
         position: relative;
@@ -1604,6 +1634,45 @@ st.markdown("""
 
     .fa-x-twitter:hover {
         color: #03a088;
+    }
+    </style>
+""", unsafe_allow_html=True) 
+
+# Update the sidebar CSS in your styles
+st.markdown("""
+    <style>
+    /* Sidebar width adjustment */
+    [data-testid="stSidebar"] {
+        width: 420px !important;  /* Default is usually 400px */
+    }
+    
+    /* Adjust collapsed state width if needed */
+    [data-testid="stSidebar"][aria-expanded="false"] {
+        margin-left: -420px !important;
+    }
+    
+    /* Sidebar styling (keeping existing styles) */
+    section[data-testid="stSidebar"] {
+        background: #202020;
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 2rem 1rem;
+    }
+    
+    .sidebar .sidebar-content {
+        background: transparent;
+    }
+    </style>
+""", unsafe_allow_html=True) 
+
+# Add this CSS before the metrics
+st.markdown("""
+    <style>
+    /* Regular metrics styling */
+    div[data-testid="stMetricValue"] > div {
+        font-size: 30px !important;
+        line-height: 1.2 !important;
+        white-space: normal !important;
+        word-wrap: break-word !important;
     }
     </style>
 """, unsafe_allow_html=True) 

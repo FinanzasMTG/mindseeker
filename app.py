@@ -728,21 +728,33 @@ def clean_price(value):
     if pd.isna(value) or value == 'N/A':
         return None
     if isinstance(value, (int, float)):
-        return f"{value:,.2f}"  # Format with thousand separator
+        return float(value)
     try:
         # Remove currency symbols and spaces
-        cleaned = str(value).replace('€', '').replace('£', '').replace('$', '').replace(',', '').strip()
-        return f"{float(cleaned):,.2f}"  # Format with thousand separator
+        cleaned = str(value).replace('€', '').replace('£', '').replace('$', '').strip()
+        # Replace comma with dot for decimal point
+        cleaned = cleaned.replace(',', '.')
+        # Split by dots and take the last value (assuming it's the decimal part)
+        parts = cleaned.split('.')
+        if len(parts) > 2:
+            # If there are multiple dots, reconstruct the number properly
+            integer_part = ''.join(parts[:-1])
+            decimal_part = parts[-1]
+            cleaned = f"{integer_part}.{decimal_part}"
+        return float(cleaned)
     except:
         return None
 
-def format_price(value, include_currency=True):
+def format_price(value):
     """Format price values with currency symbol"""
     if pd.isna(value) or value is None:
         return None
-    if include_currency:
-        return f"€{value:,.2f}"
-    return f"{value:,.2f}"
+    try:
+        # Convert to float first
+        float_value = float(value)
+        return f"{float_value:,.2f}"
+    except (ValueError, TypeError):
+        return value  # Return original value if conversion fails
 
 def clean_percentage(value):
     """
@@ -1065,27 +1077,40 @@ if st.session_state.username_selected and st.session_state.username:
                 
                 with col1:
                     total_cards = df['amount'].sum()
-                    st.metric("Total Cards", f"{total_cards:,.0f}")
+                    st.metric("Total Cards", f"{int(total_cards):,}")  # Format as integer
                 
                 with col2:
-                    unique_cards = f"{len(df):,.0f}"
-                    st.metric("Unique Cards", unique_cards)
+                    unique_cards = len(df)
+                    st.metric("Unique Cards", f"{unique_cards:,}")  # Format as integer
 
                 with col3:
                     total_value = df['total_efficient_value'].sum()
-                    st.metric("Portfolio Value", f"€{total_value:,.2f}")
+                    # Ensure total_value is float before formatting
+                    if pd.notnull(total_value):
+                        st.metric("Portfolio Value", f"€{float(total_value):,.2f}")
+                    else:
+                        st.metric("Portfolio Value", "N/A")
                 
                 with col4:
                     avg_price = df['efficient_price'].mean()
-                    st.metric("Average Price", f"€{avg_price:.2f}")
+                    # Ensure avg_price is float before formatting
+                    if pd.notnull(avg_price):
+                        st.metric("Average Price", f"€{float(avg_price):.2f}")
+                    else:
+                        st.metric("Average Price", "N/A")
                     
                 with col5:
                     max_price_diff_d7 = df['price_diff_d7'].max()
                     max_price_diff_d7_card_name = df.loc[df['price_diff_d7'] == max_price_diff_d7, 'card_name'].iloc[0]
-                    st.metric(
-                        "Highest Price Change (7d)", 
-                        f"{max_price_diff_d7_card_name}\n({format_percentage(max_price_diff_d7)})"
-                    )
+                    # Format percentage without f-string if it's already a string
+                    if pd.notnull(max_price_diff_d7):
+                        formatted_diff = format_percentage(max_price_diff_d7)
+                        st.metric(
+                            "Highest Price Change (7d)", 
+                            f"{max_price_diff_d7_card_name}\n({formatted_diff})"
+                        )
+                    else:
+                        st.metric("Highest Price Change (7d)", "N/A")
 
 
                 st.markdown('<br>', unsafe_allow_html=True)    
@@ -1657,18 +1682,16 @@ if st.session_state.username_selected and st.session_state.username:
                 # Format the DataFrame for display
                 display_df = df.copy()
                 
-                # Define price-related columns
-                price_columns = [
-                    'trend_price', 'efficient_price', 'conservative_price', 
-                    'from_price', 'value_price', 'purchase_price', 'listed_price',
-                    'total_efficient_value', 'total_conservative_value'
-                ]
-                
                 # Define percentage columns
                 percentage_columns = [
                     'price_growth', 'equity_in_country', 'equity_on_cardmarket', 'price_diff_d7'
                 ]
                 
+                price_columns = [
+                    'trend_price', 'efficient_price', 'conservative_price', 
+                    'from_price', 'value_price', 'purchase_price', 'listed_price',
+                    'total_efficient_value', 'total_conservative_value', 'ms_trend_price']
+
                 # Convert price columns to float before display
                 for col in price_columns:
                     if col in display_df.columns:

@@ -6,16 +6,27 @@ import gspread
 import os
 from dotenv import load_dotenv
 import base64
+import numpy as np
+import time
+from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
+from st_aggrid.grid_options_builder import GridOptionsBuilder
 
 # Load environment variables
 load_dotenv()
 
 # Page config and styling
 st.set_page_config(
-    page_title="MindSeeker by FinanzasMTG",
+    page_title="KitsuneMTG by FinanzasMTG",
     page_icon="🦊",
     layout="wide"
 )
+
+# Load app logo for sidebar
+assets_path = os.path.join(os.path.dirname(__file__), 'assets')
+app_logo_path = os.path.join(assets_path, 'app_logo.png')
+with open(app_logo_path, "rb") as f:
+    app_logo_contents = f.read()
+app_logo_encoded = base64.b64encode(app_logo_contents).decode()
 
 # Modern dashboard CSS inspired by Nova design
 st.markdown("""
@@ -74,6 +85,15 @@ st.markdown("""
         font-weight: 600 !important;
         font-size: 1rem !important;
         margin-bottom: 0.5rem !important;
+        padding: 0 !important;
+    }
+            
+    .category-header-tab3 {
+        color: #03a088 !important;
+        font-weight: 600 !important;
+        font-size: 1rem !important;
+        margin-bottom: -20px !important;
+        margin-top: 20px !important;
         padding: 0 !important;
     }
     
@@ -148,7 +168,7 @@ st.markdown("""
         border-radius: 16px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        transition: transform 0.2s, box-shadow 0.2s;
+        transition: background 0.3s ease;
         color: #FFFFFF !important;
     }
     
@@ -157,8 +177,8 @@ st.markdown("""
     }
     
     div[data-testid="stMetricValue"]:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        background: linear-gradient(to bottom, #24283b 0%, #24283b 65%, #004137 100%);
+        border: 1px solid #03a088;
     }
     
     /* Metric Labels */
@@ -494,34 +514,43 @@ COLUMN_NAMES = {
     'alerts': 'Alerts',
     'notes': 'Notes',
     'date': 'Date',
+    'listed_price': 'Cardmarket Listed Price',
+    'listed_stock': 'Cardmarket Listed Stock',
     'total_stock': 'Total Stock',
     'country_stock': 'Country Stock',
     'price_growth': 'Price Growth',
     'equity_in_country': 'Equity in Country',
     'equity_on_cardmarket': 'Equity on Cardmarket',
     'total_efficient_value': 'Total Value',
-    'total_conservative_value': 'Conservative Value'
+    'total_conservative_value': 'Conservative Value',
+    'collection_number': 'Collection Number',
+    'rarity': 'Rarity',
+    'reserved_list': 'Reserved List',
+    'set_release_date': 'Set Release Date',
+    'frame_era': 'Frame Era',
+    'set_type': 'Set Type',
+    'price_diff_d7': 'Today vs D7'
 }
 
 # Default columns
 DEFAULT_COLUMNS = [
     'amount', 'card_name', 'card_set', 'language', 'condition', 
-    'foil', 'signed', 'country', 'from_price', 'trend_price',
-    'ms_trend_price', 'efficient_price', 'conservative_price', 'value_price',
-    'alerts'
+    'foil', 'signed', 'alerts', 'price_diff_d7', 'from_price', 'trend_price',
+    'ms_trend_price', 'efficient_price', 'conservative_price', 'value_price'
 ]
 
 # Column categories for the selector
 column_categories = {
     "Dimensions": [
         'amount', 'card_name', 'card_set', 'language', 'condition', 
-        'foil', 'signed', 'country', 'alerts', 'notes', 'date'
+        'foil', 'signed', 'country', 'alerts', 'notes', 
+        'collection_number', 'rarity', 'reserved_list', 'set_release_date', 'frame_era', 'set_type'
     ],
     "Metrics": [
         'from_price', 'trend_price', 'ms_trend_price', 'efficient_price', 
         'conservative_price', 'value_price', 'total_stock', 'country_stock', 
-        'price_growth', 'equity_in_country', 'equity_on_cardmarket',
-        'total_efficient_value', 'total_conservative_value'
+        'price_growth', 'equity_in_country', 'equity_on_cardmarket', 'listed_price',
+        'listed_stock', 'total_efficient_value', 'total_conservative_value', 'price_diff_d7'
     ]
 }
 
@@ -588,6 +617,61 @@ def format_price(value, include_currency=True):
         return f"€{value:,.2f}"
     return f"{value:,.2f}"
 
+def clean_percentage(value):
+    """
+    Clean percentage values with extensive error handling.
+    Returns float as decimal (e.g., 0.05 for 5%)
+    """
+    if pd.isna(value) or value == 'N/A' or value == '' or value == 'null' or value is None:
+        return None
+        
+    # If already a float/int, just handle the decimal conversion
+    if isinstance(value, (float, int)):
+        # If it's already in decimal form (between -1 and 1), return as is
+        if -1 <= value <= 1:
+            return value
+        # If it's in percentage form (e.g., 5 for 5%), convert to decimal
+        return value / 100
+        
+    # Handle string values
+    try:
+        # Remove any whitespace and handle different percentage formats
+        cleaned = str(value).strip().replace(',', '.').lower()
+        
+        # Handle percentage sign
+        if '%' in cleaned:
+            cleaned = cleaned.replace('%', '').strip()
+            value_float = float(cleaned) / 100
+        else:
+            value_float = float(cleaned)
+            # If the number is too large to be a decimal, assume it's a percentage
+            if value_float > 1 or value_float < -1:
+                value_float = value_float / 100
+                
+        return value_float
+        
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+def format_percentage(value):
+    """
+    Format decimal values as percentage strings with 1 decimal place
+    e.g., 0.05 becomes '5.0%'
+    """
+    if pd.isna(value) or value is None:
+        return None
+        
+    try:
+        value_float = float(value)
+        # Only format if the value is not 0
+        if value_float != 0:
+            return f"{value_float * 100:.0f}%"
+        else:
+            return "0%"
+    except (ValueError, TypeError):
+        return None
+
+@st.cache_data
 def load_user_data(username):
     """Load data for specific user from their Google Sheet"""
     credentials = get_credentials()
@@ -606,6 +690,16 @@ def load_user_data(username):
     data = worksheet.get_all_values()
     df = pd.DataFrame(data[1:], columns=data[0])
     
+    # Get glossary sheet
+    sheet_glossary = gc.open_by_key('1aVRXJ373tp_4gjd1bPpexrpwOrVwr0Z49LB1SMz_90U')
+    worksheet_glossary = sheet_glossary.get_worksheet(0)
+    
+    # Get data and convert to DataFrame
+    data_glossary = worksheet_glossary.get_all_values()
+    df_glossary = pd.DataFrame(data_glossary[1:], columns=data_glossary[0])
+
+    df = df.merge(df_glossary, left_on=['card_name', 'card_set'], right_on=['card_name', 'card_set'], how='left')
+
     # Price-related columns
     price_columns = [
         'trend_price', 'efficient_price', 'conservative_price', 
@@ -615,10 +709,13 @@ def load_user_data(username):
     
     # Other numeric columns
     numeric_columns = [
-        'amount', 'total_stock', 'country_stock', 'listed_stock',
-        'price_growth', 'equity_in_country', 'equity_on_cardmarket'
+        'amount', 'total_stock', 'country_stock', 'listed_stock'
     ]
     
+    percentage_columns = [
+        'price_growth', 'equity_in_country', 'equity_on_cardmarket', 'price_diff_d7'
+    ]
+
     # Clean price columns
     for col in price_columns:
         if col in df.columns:
@@ -630,12 +727,46 @@ def load_user_data(username):
             df[col] = pd.to_numeric(df[col].replace('N/A', pd.NA), errors='coerce')
     
     # Clean up text columns
-    text_columns = ['card_name', 'card_set', 'language', 'condition', 'foil', 'signed', 'country', 'alerts']
+    text_columns = ['card_name', 'card_set', 'language', 'condition', 'foil', 'signed', 'country', 'alerts', 'collection_number', 'rarity', 'reserved_list', 'set_release_date', 'frame_era', 'set_type']
     for col in text_columns:
         if col in df.columns:
             df[col] = df[col].replace('N/A', None)
+
+    
+    # Clean percentage columns first (convert to decimal form)
+    for col in percentage_columns:
+        if col in df.columns:
+            # Convert NaN to None
+            df[col] = df[col].replace({pd.NA: None, np.nan: None})
+            # Apply cleaning function
+            df[col] = df[col].apply(clean_percentage)
     
     return df
+
+
+def verify_credentials(username, password):
+    """Verify username and password against the setup sheet"""
+    credentials = get_credentials()
+    gc = gspread.authorize(credentials)
+    
+    # Get setup sheet ID from secrets
+    setup_sheet_id = st.secrets["sheets_setup_id"]
+    setup_sheet = gc.open_by_key(setup_sheet_id)
+    setup_worksheet = setup_sheet.get_worksheet(0)
+    
+    # Get data and convert to DataFrame
+    data = setup_worksheet.get_all_values()
+    df_setup = pd.DataFrame(data[1:], columns=data[0])
+    
+    # Filter for the specific user (case insensitive)
+    user_row = df_setup[df_setup['user'].str.lower() == username.lower()]
+    
+    if len(user_row) == 0:
+        return False
+    
+    # Check if password matches
+    stored_password = user_row['password'].iloc[0]
+    return password == stored_password
 
 # Update the sidebar and main content section
 if 'username_selected' not in st.session_state:
@@ -643,25 +774,51 @@ if 'username_selected' not in st.session_state:
 
 # Always show sidebar for initial state
 with st.sidebar:
-    st.title("🦊 Mindseeker by FinanzasMTG")
+    st.markdown(f"""
+        <div style="display: flex; justify-content: center; margin-bottom: 30px;">
+            <img src="data:image/png;base64,{app_logo_encoded}" style="width: 400px; height: auto;">
+        </div>
+    """, unsafe_allow_html=True)
+
     username = st.text_input("Enter your username:")
+    password = st.text_input("Enter your password:", type="password")
+    
     if st.button("Enter"):
-        st.session_state.username = username
-        st.session_state.username_selected = True
-        # Add CSS class to hide sidebar
-        st.markdown("""
-            <style>
-            [data-testid="stSidebar"] {
-                display: none;
-            }
-            </style>
-        """, unsafe_allow_html=True)
-        st.rerun()
+        if verify_credentials(username, password):
+            st.session_state.username = username
+            st.session_state.username_selected = True
+            # Add CSS class to hide sidebar
+            st.markdown("""
+                <style>
+                [data-testid="stSidebar"] {
+                    display: none;
+                }
+                .main .block-container {
+                    padding-left: 5% !important;
+                    padding-right: 5% !important;
+                }
+                </style>
+            """, unsafe_allow_html=True)
+            st.rerun()
+        else:
+            st.error("Invalid username or password")
 
 if st.session_state.username_selected:
+    # Hide sidebar after successful login
+    st.markdown("""
+        <style>
+        [data-testid="stSidebar"] {
+            display: none;
+        }
+        .main .block-container {
+            padding-left: 5% !important;
+            padding-right: 5% !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
     try:
-        with st.spinner(''):  # Empty string to remove text
-            df = load_user_data(username)
+        df = load_user_data(username)
         
         if len(df) == 0:
             st.error("No data found for this username")
@@ -670,24 +827,30 @@ if st.session_state.username_selected:
             max_date = pd.to_datetime(df['date']).max().strftime('%d/%m/%Y')
             st.markdown(f"""
                 <div style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
                     margin-bottom: 2rem;
                     padding: 1rem 0;
                 ">
-                    <h1 style="
-                        color: #ffffff;
-                        margin: 0;
-                        padding: 0;
-                        font-size: 32px;
-                        font-weight: 500;
-                        line-height: 1;
-                    ">👋🏻 Welcome, {username}!</h1>
-                    <p style="
-                        color: #03a088;
-                        margin: 0;
-                        padding: 0;
-                        font-size: 16px;
-                        line-height: 1.5;
-                    ">📅 Data from {max_date}</p>
+                    <div>
+                        <h1 style="
+                            color: #ffffff;
+                            margin: 0;
+                            padding: 0;
+                            font-size: 32px;
+                            font-weight: 500;
+                            line-height: 1;
+                        ">👋🏻 Welcome, {username}!</h1>
+                        <p style="
+                            color: #fab900;
+                            margin: 0;
+                            padding: 0;
+                            font-size: 16px;
+                            line-height: 1.5;
+                        ">Data from Cardmarket as of {max_date}</p>
+                    </div>
+                    <img src="data:image/png;base64,{app_logo_encoded}" style="width: 400px; height: auto;">
                 </div>
             """, unsafe_allow_html=True)
             
@@ -716,43 +879,38 @@ if st.session_state.username_selected:
                 st.metric("Average Price", f"€{avg_price:.2f}")
             
             with col4:
-                unique_cards = len(df)
+                unique_cards = f"{len(df):,.0f}"
                 st.metric("Unique Cards", unique_cards)
             
             # Tabs for different views
             tab1, tab2, tab3 = st.tabs(["Portfolio Overview", "Price Analysis", "Inventory Details"])
             
             with tab1:
-                # Add custom CSS for the chart container and title
-                st.markdown("""
-                    <style>
-                    [data-testid="stPlotlyChart"] > div {
-                        width: 100% !important;
-                        display: flex !important;
-                        justify-content: center !important;
-                    }
-                    
-                    .js-plotly-plot {
-                        width: 90% !important;
-                        margin: 0 auto !important;
-                    }
-                    </style>
-                """, unsafe_allow_html=True)
+                # Calculate total portfolio value
+                total_portfolio_value = df['total_efficient_value'].sum()
                 
-                # Add title outside the chart
-                st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Portfolio Value by Set</h3>', unsafe_allow_html=True)
+                # Create a temporary dataframe with percentage calculations
+                tab_1_df = df.copy()
+                tab_1_df['percentage'] = (tab_1_df['total_efficient_value'] / total_portfolio_value * 100)
+                
+                # Group by set and calculate sums and percentages
+                set_data = tab_1_df.groupby('card_set').agg({
+                    'total_efficient_value': 'sum',
+                    'percentage': 'sum'
+                }).reset_index()
                 
                 # Portfolio composition by set
                 fig_sets = px.treemap(
-                    df,
+                    set_data,
                     path=['card_set'],
                     values='total_efficient_value',
+                    custom_data=['card_set', 'total_efficient_value', 'percentage']  # Add percentage to custom data
                 )
                 
-                # Update treemap layout (removed title from here)
+                # Update treemap layout and hover template
                 fig_sets.update_layout(
                     height=450,
-                    margin=dict(t=20, l=20, r=20, b=20),  # Reduced top margin since title is removed
+                    margin=dict(t=20, l=20, r=20, b=20),
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(0,0,0,0)',
                     font=dict(
@@ -760,6 +918,16 @@ if st.session_state.username_selected:
                         size=14
                     ),
                     autosize=True
+                )
+                
+                # Customize hover template
+                fig_sets.update_traces(
+                    hovertemplate="<br>".join([
+                        "<b>%{customdata[0]}</b>",  # Set name
+                        f"{COLUMN_NAMES['total_efficient_value']}: €%{{customdata[1]:.2f}}",  # Value with euro symbol
+                        "Percentage of Portfolio: %{customdata[2]:.1f}%",  # Percentage with 1 decimal
+                        "<extra></extra>"  # Remove secondary box
+                    ])
                 )
                 
                 # Display the chart
@@ -778,39 +946,209 @@ if st.session_state.username_selected:
                     }
                 )
                 
-            with tab2:
-                # Add custom CSS for the chart container
-                st.markdown("""
-                    <style>
-                    [data-testid="stPlotlyChart"] > div {
-                        width: 100% !important;
-                        display: flex !important;
-                        justify-content: center !important;
+                # Add spacing
+                st.markdown("<br>", unsafe_allow_html=True)
+                
+                # Create three columns for pie charts
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    # Reserved List pie chart
+                    st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Reserved List Distribution</h3>', unsafe_allow_html=True)
+                    
+                    # Group by Reserved List status and count distinct cards
+                    rl_data = df.groupby('reserved_list')['card_name'].nunique().reset_index()
+                    rl_data['percentage'] = (rl_data['card_name'] / rl_data['card_name'].sum() * 100)
+                    
+                    # Create pie chart
+                    fig_rl = px.pie(
+                        rl_data,
+                        values='card_name',
+                        names='reserved_list',
+                        custom_data=['percentage']
+                    )
+                    
+                    # Update layout with centered bottom legend
+                    fig_rl.update_layout(
+                        height=350,
+                        margin=dict(t=20, l=20, r=20, b=60),  # Increased bottom margin for legend
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        font=dict(color='#ffffff'),
+                        showlegend=True,
+                        legend=dict(
+                            orientation="h",
+                            yanchor="top",
+                            y=-0.2,  # Move legend below chart
+                            xanchor="center",
+                            x=0.5,  # Center legend horizontally
+                            font=dict(size=12)
+                        )
+                    )
+                    
+                    # Update traces
+                    fig_rl.update_traces(
+                        textinfo='percent+label',
+                        hovertemplate="<br>".join([
+                            "<b>%{label}</b>",
+                            "Cards: %{value}",
+                            "Percentage: %{customdata[0]:.1f}%",
+                            "<extra></extra>"
+                        ]),
+                        marker=dict(colors=['#5b50c1', '#03a088'])  # Green for Yes, Purple for No
+                    )
+                    
+                    st.plotly_chart(fig_rl, use_container_width=True)
+                
+                with col2:
+                    # Rarity pie chart
+                    st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Rarity Distribution</h3>', unsafe_allow_html=True)
+                    
+                    # Group by Rarity and count distinct cards
+                    rarity_data = df.groupby('rarity')['card_name'].nunique().reset_index()
+                    rarity_data['percentage'] = (rarity_data['card_name'] / rarity_data['card_name'].sum() * 100)
+                    
+                    # Create pie chart
+                    fig_rarity = px.pie(
+                        rarity_data,
+                        values='card_name',
+                        names='rarity',
+                        custom_data=['percentage']
+                    )
+                    
+                    # Update layout with centered bottom legend
+                    fig_rarity.update_layout(
+                        height=350,
+                        margin=dict(t=20, l=20, r=20, b=60),  # Increased bottom margin for legend
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        font=dict(color='#ffffff'),
+                        showlegend=True,
+                        legend=dict(
+                            orientation="h",
+                            yanchor="top",
+                            y=-0.2,  # Move legend below chart
+                            xanchor="center",
+                            x=0.5,  # Center legend horizontally
+                            font=dict(size=12)
+                        )
+                    )
+                    
+                    # Color mapping for rarities
+                    rarity_colors = {
+                        'Common': '#95a5a6',
+                        'Uncommon': '#7f8c8d',
+                        'Rare': '#fab900',
+                        'Mythic': '#e67e22',
+                        'Special': '#9b59b6'
                     }
                     
-                    .js-plotly-plot {
-                        width: 90% !important;
-                        margin: 0 auto !important;
+                    # Update traces
+                    fig_rarity.update_traces(
+                        textinfo='percent+label',
+                        hovertemplate="<br>".join([
+                            "<b>%{label}</b>",
+                            "Cards: %{value}",
+                            "Percentage: %{customdata[0]:.1f}%",
+                            "<extra></extra>"
+                        ]),
+                        marker=dict(colors=[rarity_colors.get(r, '#ffffff') for r in rarity_data['rarity']])
+                    )
+                    
+                    st.plotly_chart(fig_rarity, use_container_width=True)
+                
+                with col3:
+                    # Listed Status pie chart
+                    st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Listed Cards on Cardmarket</h3>', unsafe_allow_html=True)
+                    
+                    # Create listed status data
+                    df['listed_status'] = df['listed_stock'].apply(lambda x: 'Listed' if pd.notnull(x) and str(x).replace('.', '').isdigit() and float(x) > 0 else 'Not Listed')
+                    listed_counts = df.groupby('listed_status')['card_name'].nunique().reset_index()
+                    listed_counts['percentage'] = (listed_counts['card_name'] / listed_counts['card_name'].sum() * 100)
+                    
+                    # Define color mapping
+                    listed_colors = {
+                        'Listed': '#00a195',
+                        'Not Listed': '#e9536f'
+                    }
+                    
+                    # Create pie chart
+                    fig_listed = px.pie(
+                        listed_counts,
+                        values='card_name',
+                        names='listed_status',
+                        custom_data=['percentage'],
+                        color='listed_status',
+                        color_discrete_map=listed_colors
+                    )
+                    
+                    # Update layout with centered bottom legend
+                    fig_listed.update_layout(
+                        height=350,
+                        margin=dict(t=20, l=20, r=20, b=60),
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        font=dict(color='#ffffff'),
+                        showlegend=True,
+                        legend=dict(
+                            orientation="h",
+                            yanchor="top",
+                            y=-0.2,
+                            xanchor="center",
+                            x=0.5,
+                            font=dict(size=12)
+                        ),
+                        uniformtext_minsize=12,
+                        uniformtext_mode='hide'
+                    )
+                    
+                    # Update traces with white text
+                    fig_listed.update_traces(
+                        textinfo='percent+label',
+                        textfont=dict(color='white', size=12),  # Force white text
+                        hovertemplate="<br>".join([
+                            "<b>%{label}</b>",
+                            "Cards: %{value}",
+                            "Percentage: %{customdata[0]:.1f}%",
+                            "<extra></extra>"
+                        ])
+                    )
+                    
+                    st.plotly_chart(fig_listed, use_container_width=True)
+                
+            with tab2:
+                # Add custom CSS for the chart container and dropdown
+                st.markdown("""
+                    <style>
+                    /* Existing chart container styles ... */
+                    
+                    /* Style for the metric selector */
+                    .metric-selector {
+                        margin-bottom: 1rem;
+                        margin-top: 30px;
                     }
                     </style>
                 """, unsafe_allow_html=True)
                 
                 # Price distribution title and chart
-                st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Price Distribution</h3>', unsafe_allow_html=True)
+                st.markdown('<h3 style="color: #03a088; margin-bottom: 5px;">Price Distribution</h3>', unsafe_allow_html=True)
                 fig_price = px.histogram(
                     df,
                     x='efficient_price',
-                    nbins=5000
+                    nbins=5000,
+                    labels={'efficient_price': 'Card Price (€)', 'count': 'Number of Cards'}
                 )
                 
-                # Update histogram layout
+                # Update histogram layout with explicit y-axis title
                 fig_price.update_layout(
                     height=450,
                     margin=dict(t=20, l=20, r=20, b=20),
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(0,0,0,0)',
                     font=dict(color='#ffffff'),
-                    autosize=True
+                    autosize=True,
+                    xaxis_title='Card Price (€)',
+                    yaxis_title='Number of Cards'  # This will force the y-axis label
                 )
                 
                 st.plotly_chart(
@@ -828,23 +1166,104 @@ if st.session_state.username_selected:
                     }
                 )
                 
-                # Price growth analysis title and chart
-                st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Price Growth vs Current Price</h3>', unsafe_allow_html=True)
-                fig_growth = px.scatter(
-                    df,
-                    x='efficient_price',
-                    y='price_growth',
-                    hover_data=['card_name']
-                )
+                # Create two columns for title and dropdown
+                col_title, col_dropdown = st.columns([3, 1])  # Adjust ratio as needed (3:1 here)
+
+                # Add styling for the dropdown
+                st.markdown("""
+                    <style>
+                    /* Dropdown container and input */
+                    div[data-baseweb="select"] {
+                        background-color: #24283b !important;
+                        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                        border-radius: 8px !important;
+                        width: 100% !important;  /* Changed from 200px to 100% */
+                        margin-top: 30px;
+                    }
+                    
+                    /* Make the select container fill the width */
+                    [data-testid="column"] [data-testid="stMultiSelect"] {
+                        width: 100% !important;
+                    }
+                    
+                    /* Force width on the select container */
+                    div[data-baseweb="select"] > div[data-baseweb="select-container"] {
+                        width: 100% !important;
+                    }
+                    
+                    /* Make the input field fill the width */
+                    div[data-baseweb="select"] input {
+                        width: 100% !important;
+                    }
+                    
+                    /* Dropdown options menu */
+                    div[role="listbox"] {
+                        background-color: #24283b !important;
+                        border: 1px solid #03a088 !important;
+                        width: 100% !important;
+                    }
+                    
+                    /* Make sure the multiselect container fills the column */
+                    .stMultiSelect {
+                        width: 100% !important;
+                    }
+                    </style>
+                """, unsafe_allow_html=True)
                 
-                # Update scatter plot layout
+                # Dropdown in the right column with right alignment
+                with col_dropdown:
+                    # Create a container with right alignment
+                    container = st.container()
+                    with container:
+                        selected_metric = st.selectbox(
+                            "Select Price Metric",
+                            ["Price Growth", "Today vs D7"],
+                            key="price_metric_selector",
+                            label_visibility="collapsed"
+                        )
+
+                # Title in the left column
+                with col_title:
+                    st.markdown(f'<h3 style="color: #03a088; margin-bottom: 5px; margin-top: 30px;">{selected_metric} vs Current Price</h3>', unsafe_allow_html=True)
+
+
+                # Create a temporary dataframe with formatted values based on selection
+                temp_df = df.copy()
+                if selected_metric == "Price Growth":
+                    y_column = 'price_growth'
+                    y_label = 'Price Growth (%)'
+                    temp_df['plot_value'] = temp_df['price_growth'].apply(lambda x: x * 100 if pd.notnull(x) else x)
+                else:  # Today vs D7
+                    y_column = 'price_diff_d7'
+                    y_label = 'Today vs D7 (%)'
+                    temp_df['plot_value'] = temp_df['price_diff_d7'].apply(lambda x: x * 100 if pd.notnull(x) else x)
+
+                fig_growth = px.scatter(
+                    temp_df,
+                    x='efficient_price',
+                    y='plot_value',
+                    hover_data={
+                        'card_name': True,
+                        'plot_value': ':.1f',  # Format to 1 decimal place
+                    },
+                    labels={
+                        'efficient_price': 'Current Price (€)',
+                        'plot_value': y_label,
+                        'card_name': 'Card Name'
+                    }
+                )
+
+                # Update the layout maintaining transparent background and adding % suffix
                 fig_growth.update_layout(
                     height=450,
                     margin=dict(t=20, l=20, r=20, b=20),
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(0,0,0,0)',
                     font=dict(color='#ffffff'),
-                    autosize=True
+                    autosize=True,
+                    yaxis=dict(
+                        ticksuffix="%",  # Add % to tick labels
+                    )
                 )
                 
                 st.plotly_chart(
@@ -870,7 +1289,7 @@ if st.session_state.username_selected:
                 
                 # Dimensions column
                 with col1:
-                    st.markdown('<p class="category-header">Dimensions</p>', unsafe_allow_html=True)
+                    st.markdown('<p class="category-header-tab3">Dimensions</p>', unsafe_allow_html=True)
                     dimension_cols = [col for col in column_categories["Dimensions"] if col in df.columns]
                     if dimension_cols:
                         selected_dims = st.multiselect(
@@ -884,7 +1303,7 @@ if st.session_state.username_selected:
                 
                 # Metrics column
                 with col2:
-                    st.markdown('<p class="category-header">Metrics</p>', unsafe_allow_html=True)
+                    st.markdown('<p class="category-header-tab3">Metrics</p>', unsafe_allow_html=True)
                     metric_cols = [col for col in column_categories["Metrics"] if col in df.columns]
                     if metric_cols:
                         selected_metrics = st.multiselect(
@@ -908,7 +1327,7 @@ if st.session_state.username_selected:
                 
                 # Format percentage columns
                 percentage_columns = [
-                    'price_growth', 'equity_in_country', 'equity_on_cardmarket'
+                    'price_growth', 'equity_in_country', 'equity_on_cardmarket', 'price_diff_d7'
                 ]
                 
                 # Format prices
@@ -919,21 +1338,96 @@ if st.session_state.username_selected:
                 # Format percentages
                 for col in percentage_columns:
                     if col in display_df.columns:
-                        display_df[col] = display_df[col].apply(lambda x: f"{x*100:.1f}%" if x is not None else None)
+                        # Convert NaN to None before formatting
+                        display_df[col] = display_df[col].replace({pd.NA: None, np.nan: None})
+                        display_df[col] = display_df[col].apply(format_percentage)
                 
                 # Rename columns for display
                 display_df.columns = [COLUMN_NAMES.get(col, col.replace('_', ' ').title()) for col in display_df.columns]
                 
-                # Update the dataframe display section in tab3
+                # Update the dataframe display section
                 if selected_columns:
                     display_columns = [COLUMN_NAMES.get(col, col.replace('_', ' ').title()) for col in selected_columns]
                     df_display = display_df[display_columns].copy()
-                    df_display.index = range(len(df_display))  # Reset index
-                    st.dataframe(
+                    
+                    # Configure grid options
+                    gb = GridOptionsBuilder.from_dataframe(df_display)
+                    gb.configure_default_column(
+                        filterable=True,
+                        sorteable=True,
+                        resizable=True,
+                        filter=True,  # Explicitly enable filters
+                        menuTabs=['filterMenuTab', 'generalMenuTab']  # Show filter and general menu tabs
+                    )
+                    
+                    # Configure column-specific options
+                    for col in df_display.columns:
+                        if col in ['Today vs D7', 'Price Growth', 'Equity in Country', 'Equity on Cardmarket']:
+                            cellStyle = JsCode("""
+                            function(params) {
+                                if (params.value === null || params.value === undefined) return {};
+                                const val = parseFloat(params.value.replace('%', ''));
+                                if (val > 0) return { color: '#00a195' };
+                                if (val < 0) return { color: '#e9536f' };
+                                return { color: '#fab900' };
+                            }
+                            """)
+                            gb.configure_column(
+                                col,
+                                type=["numericColumn", "numberColumnFilter"],
+                                filter=True,
+                                filterParams={
+                                    'buttons': ['reset', 'apply'],
+                                    'closeOnApply': True
+                                },
+                                cellStyle=cellStyle
+                            )
+                        else:
+                            gb.configure_column(
+                                col,
+                                type=["textColumn", "textColumnFilter"],
+                                filter=True,
+                                filterParams={
+                                    'buttons': ['reset', 'apply'],
+                                    'closeOnApply': True
+                                }
+                            )
+
+                    # Add additional grid options
+                    grid_options = gb.build()
+                    grid_options['enableRangeSelection'] = True
+                    grid_options['enableColumnFilter'] = True
+                    grid_options['enableFilter'] = True
+                    
+                    # Custom CSS for AgGrid
+                    grid_css = {
+                        ".ag-root.ag-theme-streamlit": {"background-color": "#24283b"},
+                        ".ag-theme-streamlit .ag-header": {"background-color": "#1f2335"},
+                        ".ag-theme-streamlit .ag-header-cell": {"color": "#03a088"},
+                        ".ag-theme-streamlit .ag-cell": {"color": "#c0caf5"},
+                        ".ag-theme-streamlit .ag-row-even": {"background-color": "#24283b"},
+                        ".ag-theme-streamlit .ag-row-odd": {"background-color": "#1f2335"},
+                        ".ag-theme-streamlit .ag-row:hover": {"background-color": "#292e42"},
+                        ".ag-theme-streamlit .ag-filter-toolpanel-header": {"background-color": "#1f2335", "color": "#03a088"},
+                        ".ag-theme-streamlit .ag-filter": {"background-color": "#24283b"},
+                        ".ag-theme-streamlit .ag-filter-header": {"background-color": "#1f2335"},
+                        ".ag-theme-streamlit .ag-filter-filter": {"background-color": "#1f2335", "color": "#c0caf5", "border-color": "#03a088"},
+                        ".ag-theme-streamlit .ag-filter-value": {"background-color": "#1f2335", "color": "#c0caf5", "border-color": "#03a088"},
+                        ".ag-theme-streamlit .ag-menu": {"background-color": "#24283b", "border-color": "#03a088"},
+                        ".ag-theme-streamlit .ag-menu-option": {"color": "#c0caf5"},
+                        ".ag-theme-streamlit .ag-menu-option:hover": {"background-color": "#292e42"}
+                    }
+                    
+                    # Display the grid
+                    AgGrid(
                         df_display,
-                        use_container_width=True,
+                        gridOptions=grid_options,
                         height=600,
-                        hide_index=True  # Use Streamlit's native index hiding
+                        custom_css=grid_css,
+                        theme="streamlit",
+                        allow_unsafe_jscode=True,
+                        update_mode="model_changed",
+                        enable_enterprise_modules=False
                     )
                 else:
                     st.warning("Please select at least one column to display")
@@ -943,11 +1437,25 @@ if st.session_state.username_selected:
     except Exception as e:
         st.error(f"Error loading data: {str(e)}")
 else:
-    st.info("Please enter your username to view your portfolio")
+
+    # Display the intro text
+    st.info("""
+    📈 Welcome to KitsuneMTG, your intelligent MTG Portfolio Tracker!
+
+    This dashboard provides insights into your Magic: The Gathering collection, helping you make informed decisions about your cards.
+
+    All data is synchronized with Cardmarket to ensure you have up-to-date information for your collection. Use the tabs above to navigate through different views and discover the full potential of your MTG portfolio.
+            
+    Enter your username to get started! 🎉
+    """)
+
+    # Add social media links with logos
+    assets_path = os.path.join(os.path.dirname(__file__), 'assets')
+
+
 
 # Footer
 # Replace the text with the image
-assets_path = os.path.join(os.path.dirname(__file__), 'assets')
 logo_path = os.path.join(assets_path, 'Alpha_Logo.png')
 with open(logo_path, "rb") as f:
     logo_contents = f.read()
@@ -970,7 +1478,7 @@ def get_base64_of_bin_file(bin_file):
 
 def set_bg_image():
     assets_path = os.path.join(os.path.dirname(__file__), 'assets')
-    bg_img_path = os.path.join(assets_path, 'app_bg.jpg')
+    bg_img_path = os.path.join(assets_path, 'app_bg_logged_in.jpg')
     
     bin_str = get_base64_of_bin_file(bg_img_path)
     page_bg_img = f'''
@@ -1049,6 +1557,53 @@ st.markdown("""
     section[data-testid="stSidebar"] > div.st-emotion-cache-16idsys:hover {
         background: #028474 !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    }
+    </style>
+""", unsafe_allow_html=True) 
+
+st.markdown("""
+    <style>
+    /* Remove header link styling */
+    .stMarkdown a {
+        text-decoration: none !important;
+        color: inherit !important;
+        pointer-events: none !important;
+    }
+    
+    /* Ensure headers don't show link behavior */
+    h1, h2, h3, h4, h5, h6 {
+        pointer-events: none !important;
+    }
+    
+    /* Remove hover effects */
+    .stMarkdown a:hover {
+        text-decoration: none !important;
+        color: inherit !important;
+    }
+    </style>
+""", unsafe_allow_html=True) 
+
+# In the main CSS block where other styles are defined (after the existing styles)
+st.markdown("""
+    <style>
+    /* Style for Twitter link */
+    .stAlert a {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .stAlert a:hover {
+        color: #03a088 !important;
+    }
+
+    .fa-x-twitter {
+        font-size: 32px;
+        color: #ffffff;
+        transition: color 0.3s ease;
+    }
+
+    .fa-x-twitter:hover {
+        color: #03a088;
     }
     </style>
 """, unsafe_allow_html=True) 

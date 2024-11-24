@@ -731,7 +731,7 @@ def clean_price(value):
         return value
     try:
         # Remove currency symbols and spaces
-        cleaned = str(value).replace('€', '').replace('£', '').replace('$', '').replace(',', '.').strip()
+        cleaned = str(value).replace('€', '').replace('£', '').replace('$', '').replace(',', '').strip()
         return float(cleaned)
     except:
         return None

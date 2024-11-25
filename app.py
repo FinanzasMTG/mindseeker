@@ -1569,6 +1569,8 @@ if st.session_state.username_selected and st.session_state.username:
                     return f'<span style="color: {color}">{percentage:.1f}%</span>'
 
                 # Reserved List Cards (Left table)
+                
+                
                 with col1:
                     st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Top 10 Reserved List Cards</h3>', unsafe_allow_html=True)
                     
@@ -1720,6 +1722,8 @@ if st.session_state.username_selected and st.session_state.username:
                     }
                     </style>
                 """, unsafe_allow_html=True)
+
+                
 
             with tab3:
                 # Create two columns for dimensions and metrics
@@ -1962,15 +1966,14 @@ if st.session_state.username_selected and st.session_state.username:
                         col1, col2 = st.columns([1, 1])
                         with col1:
                             selected_card = st.selectbox(
-                                "",
+                                "Select a Card",
                                 options=sorted(user_cards),
                                 index=0,
-                                label_visibility="collapsed",
+                                label_visibility="visible",
                                 key="tab4_select"
                             )
 
-                        with col2:
-                            st.write('')
+                        st.markdown('<br>', unsafe_allow_html=True)
 
                         # Filter data for selected card
                         card_data = df_historical_filtered[df_historical_filtered['card_name_set'] == selected_card]
@@ -2301,9 +2304,9 @@ st.markdown("""
 # Add this CSS for login form styling
 st.markdown("""
     <style>
-    /* Remove form container styling and border */
+    /* Form container styling */
     [data-testid="stForm"] {
-        max-width: 400px !important;
+        max-width: 300px !important;
         margin: 0 auto !important;
         padding: 0 !important;
         border: none !important;
@@ -2311,29 +2314,70 @@ st.markdown("""
         box-shadow: none !important;
     }
     
-    /* Remove any container styling */
-    [data-testid="stForm"] > div {
-        background-color: transparent !important;
-        border: none !important;
-        padding: 0 !important;
-        box-shadow: none !important;
+    /* Form inputs container */
+    [data-testid="stForm"] .stTextInput > div {
+        width: 300px !important;
+        position: relative !important;  /* For absolute positioning of button */
     }
     
-    /* Keep existing form element styling */
+    /* Input fields */
     [data-testid="stForm"] input[type="text"],
     [data-testid="stForm"] input[type="password"] {
-        width: 400px !important;
+        width: 100% !important;
+        padding-right: 40px !important;  /* Space for the toggle button */
     }
     
-    /* Keep existing button styling */
+    /* Password toggle button */
+    [data-testid="stForm"] button[aria-label="Toggle password visibility"] {
+        position: absolute !important;
+        right: 8px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        z-index: 1 !important;
+        background: transparent !important;
+        border: none !important;
+        cursor: pointer !important;
+        padding: 4px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-width: 32px !important;
+        height: 32px !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    
+    /* Password toggle button icon */
+    [data-testid="stForm"] button[aria-label="Toggle password visibility"] svg {
+        width: 20px !important;
+        height: 20px !important;
+        opacity: 0.7 !important;
+    }
+    
+    /* Form button styling */
     [data-testid="stForm"] .stButton > button {
-        width: 400px !important;
+        width: 300px !important;
         color: #ffffff !important;
         border-color: #03a088 !important;
         background-color: #03a088 !important;
     }
     
-    /* Rest of your existing form styles... */
+    /* Form elements container */
+    [data-testid="stForm"] > div {
+        width: 300px !important;
+        margin: 0 auto !important;
+    }
+    
+    /* Remove any hidden overflow */
+    [data-testid="stForm"] .stTextInput {
+        width: 100% !important;
+        overflow: visible !important;
+    }
+    
+    /* Ensure button container is visible */
+    [data-testid="stForm"] .stTextInput > div > div {
+        overflow: visible !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -2745,5 +2789,152 @@ st.markdown("""
             max-width: 300px !important;
             font-size: 12px !important;
         }
+    </style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+    <style>
+    /* Alternative selector if the above doesn't work */
+    [data-testid="stSelectbox"] > label {
+        margin-bottom: -30px !important;
+        padding-bottom: 0px !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+def format_table_html(df, display_columns):
+    html = f"""
+    <div class="table-container">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    {''.join(f'<th>{col}</th>' for col in display_columns)}
+                </tr>
+            </thead>
+            <tbody>
+    """
+    
+    for _, row in df.iterrows():
+        html += "<tr>"
+        for i, val in enumerate(row):
+            # Add title attribute for tooltip on hover
+            title_attr = f'title="{val}"' if i in [1, 2] else ''  # For Card Name and Set columns
+            html += f'<td {title_attr}>{val}</td>'
+        html += "</tr>"
+    
+    html += """
+            </tbody>
+        </table>
+    </div>
+    """
+    return html
+
+st.markdown("""
+    <style>
+    /* Table container */
+    .table-container {
+        width: 100%;
+        margin: 0;
+        background: #202020;
+        border-radius: 2px;
+        overflow: hidden;
+        font-size: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        border: 1px solid #363636;
+    }
+    
+    /* Table styling */
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        background: #202020;
+    }
+    
+    /* Column widths */
+    .custom-table th:nth-child(1),
+    .custom-table td:nth-child(1) {  /* Rank */
+        width: 50px;
+    }
+    
+    .custom-table th:nth-child(2),
+    .custom-table td:nth-child(2) {  /* Card Name */
+        width: 180px;
+    }
+    
+    .custom-table th:nth-child(3),
+    .custom-table td:nth-child(3) {  /* Set */
+        width: 120px;
+    }
+    
+    .custom-table th:nth-child(4),
+    .custom-table td:nth-child(4) {  /* Price */
+        width: 80px;
+    }
+    
+    .custom-table th:nth-child(5),
+    .custom-table td:nth-child(5) {  /* Change */
+        width: 80px;
+    }
+    
+    /* Cell styling */
+    .custom-table td {
+        padding: 12px 16px;
+        color: #ffffff;
+        border-color: #363636;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* Rank column styling */
+    .custom-table td:first-child {
+        font-weight: 700;
+        color: #c1c1c1;
+    }
+    
+    /* Header styling */
+    .custom-table th {
+        background: #363636;
+        padding: 12px 16px;
+        font-weight: 600;
+        color: #03a088;
+        text-align: left;
+        border-color: #363636;
+    }
+    
+    /* Row hover effect */
+    .custom-table tr:hover td {
+        background: #292e42;
+    }
+    
+    /* Tooltip on hover */
+    .custom-table td[title] {
+        position: relative;
+    }
+    
+    .custom-table td[title]:hover::after {
+        content: attr(title);
+        position: absolute;
+        left: 0;
+        top: 100%;
+        z-index: 1000;
+        background: #202020;
+        color: #ffffff;
+        padding: 5px 10px;
+        border-radius: 4px;
+        white-space: nowrap;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        border: 1px solid #363636;
+    }
+    
+    /* Ensure columns maintain spacing */
+    div[data-testid="columns"] {
+        gap: 1rem !important;
+    }
+    
+    div[data-testid="column"] {
+        padding: 0 5px !important;
+    }
     </style>
 """, unsafe_allow_html=True)

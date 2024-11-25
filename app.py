@@ -11,9 +11,28 @@ import time
 from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 from st_aggrid.grid_options_builder import GridOptionsBuilder
 import random
+import sqlite3
+import plotly.graph_objects as go
 
-# Load environment variables
-load_dotenv()
+
+@st.cache_data
+def load_historical_data():
+    """Load and cache historical data from SQLite database"""
+    try:
+        # Connect to SQLite database
+        conn = sqlite3.connect('mtg_historical.db')
+        
+        # Read data into DataFrame
+        query = "SELECT * FROM mtg_card_prices_historical ORDER BY date, card_name_set"  # Adjust table name if different
+        df_historical = pd.read_sql_query(query, conn)
+        
+        # Close connection
+        conn.close() 
+        return df_historical
+    except Exception as e:
+        st.error(f"Error loading historical data: {str(e)}")
+        return pd.DataFrame()  # Return empty DataFrame if there's an error
+
 
 # Add this near the top of your file with other constants
 TRIVIAS = [
@@ -681,6 +700,8 @@ column_categories = {
     ]
 }
 
+
+
 # Authentication
 @st.cache_resource
 def get_credentials():
@@ -839,6 +860,12 @@ def load_user_data(username):
 
     df = df.merge(df_glossary, left_on=['card_name', 'card_set'], right_on=['card_name', 'card_set'], how='left')
 
+    # Create card_name_set column
+    df['card_name_set'] = df.apply(
+        lambda x: f"{x['card_name']} - {x['card_set']} - {'Foil' if x['foil'] == 'Yes' else 'Regular'}", 
+        axis=1
+    )
+    
     # Price-related columns
     price_columns = [
         'trend_price', 'efficient_price', 'conservative_price', 
@@ -1060,7 +1087,7 @@ if st.session_state.username_selected and st.session_state.username:
                         ">Data from Cardmarket as of {max_date}</p>''', unsafe_allow_html=True)
             
             # Tabs for different views
-            tab1, tab2, tab3 = st.tabs(["Portfolio Overview", "Price Analysis", "Inventory Details"])
+            tab1, tab2, tab3, tab4 = st.tabs(["Portfolio Overview", "Price Analysis", "Inventory Details", "Historical Trends"])
             
             with tab1:
                 st.markdown('<br>', unsafe_allow_html=True)
@@ -1111,6 +1138,7 @@ if st.session_state.username_selected and st.session_state.username:
                         )
                     else:
                         st.metric("Highest Price Change (7d)", "N/A")
+
 
 
                 st.markdown('<br>', unsafe_allow_html=True)    
@@ -1869,6 +1897,171 @@ if st.session_state.username_selected and st.session_state.username:
                 else:
                     st.warning("Please select at least one column to display")
 
+            with tab4:
+                # Load historical data
+                df_historical = load_historical_data()
+                
+                if not df_historical.empty:
+                    # Get user's cards
+                    user_cards = df['card_name_set'].unique()
+                    
+                    # Filter historical data for user's cards only
+                    df_historical_filtered = df_historical[df_historical['card_name_set'].isin(user_cards)]
+                    if not df_historical_filtered.empty:
+                        # Convert date column to datetime if it's not already
+                        df_historical_filtered['date'] = pd.to_datetime(df_historical_filtered['date'])
+                        
+                        col1, col2 = st.columns([3, 1])
+                        with col1:
+                            # Create card selector
+                            selected_cards = st.multiselect(
+                                "",
+                                options=sorted(user_cards),
+                                default=user_cards[0],
+                                max_selections=1,  # Limit to one selection
+                                label_visibility="collapsed"
+                            )
+                            
+                            # Get the single selected card (first/only item in the list)
+                            selected_card = selected_cards[0] if selected_cards else user_cards[0]
+
+                        with col2:
+                            st.write('')
+
+                        # Filter data for selected card
+                        card_data = df_historical_filtered[df_historical_filtered['card_name_set'] == selected_card]
+                        
+                        if not card_data.empty:
+                            # Add metrics before the chart
+                            col1, col2, col3, col4 = st.columns(4)
+                            
+                            with col1:
+                                min_price = card_data['efficient_price'].min()
+                                st.metric(f"Lowest Price", f"€{min_price:.2f}")
+                            
+                            with col2:
+                                max_price = card_data['efficient_price'].max()
+                                st.metric(f"Highest Price", f"€{max_price:.2f}")
+                            
+                            with col3:
+                                current_price = card_data.iloc[-1]['efficient_price']
+                                st.metric(f"Current Price", f"€{current_price:.2f}")
+
+                            with col4:
+                                avg_price = card_data['efficient_price'].mean()
+                                st.metric(f"Average Price", f"€{avg_price:.2f}")
+                            
+                            # Create the figure with both series
+                            fig = px.line(
+                                card_data,
+                                x='date',
+                                y='efficient_price',
+                                title=f'» Price History for {selected_card}',
+                                labels={
+                                    'date': 'Date',
+                                    'efficient_price': 'Price (€)'
+                                }
+                            )
+
+                            # Add the constant average price line
+                            fig.add_hline(
+                                y=avg_price,
+                                line_dash="dash",
+                                line_width=1,
+                                line_color="#fab900",
+                                annotation_text=f"Avg: €{avg_price:.2f}",
+                                annotation_position="right",
+                                annotation_font_color="#fab900"
+                            )
+
+                            # Update the layout to ensure colors are applied
+                            fig.update_layout(
+                                showlegend=True,
+                                hovermode='x unified'
+                            )
+
+                            # Update legend names
+                            fig.data[0].name = 'Price'
+                            
+                            # Update layout with specific title font size
+                            fig.update_layout(
+                                height=500,
+                                margin=dict(t=20, l=20, r=20, b=20),
+                                paper_bgcolor='rgba(0,0,0,0)',
+                                plot_bgcolor='rgba(0,0,0,0)',
+                                font=dict(color='#ffffff'),
+                                autosize=True,
+                                showlegend=False,
+                                title=dict(
+                                    text=f'» Price History for {selected_card}',
+                                    font=dict(size=14)  # Set title font size to 14px
+                                ),
+                                xaxis=dict(
+                                    showgrid=True,
+                                    gridcolor='rgba(255, 255, 255, 0.1)',
+                                    tickformat='%Y-%m-%d'
+                                ),
+                                yaxis=dict(
+                                    showgrid=True,
+                                    gridcolor='rgba(255, 255, 255, 0.1)',
+                                    tickprefix='€'
+                                )
+                            )
+                            
+                            # Update line style
+                            fig.update_traces(
+                                line=dict(color='#03a088', width=2),
+                                hovertemplate='<b>Date</b>: %{x|%Y-%m-%d}<br>' +
+                                            '<b>Price</b>: €%{y:.2f}<extra></extra>'
+                            )
+                            
+                            # Display the chart
+                            st.plotly_chart(
+                                fig,
+                                use_container_width=True,
+                                config={
+                                    'displayModeBar': True,
+                                    'displaylogo': False,
+                                    'modeBarButtonsToRemove': ['select', 'lasso2d'],
+                                    'responsive': True,
+                                    'modeBarStyle': {
+                                        'backgroundColor': 'transparent',
+                                        'color': '#ffffff'
+                                    }
+                                }
+                            )
+                            
+                        else:
+                            st.warning("No historical data available for selected card")
+                    else:
+                        st.warning("No historical data found for your cards")
+                else:
+                    st.error("Unable to load historical data")
+
+                # Add targeted CSS
+                st.markdown("""
+                    <style>
+                    /* Target the specific selectbox in tab4 */
+                    [data-key="tab4_card_select"] {
+                        width: 100vw !important;  /* Use viewport width */
+                        max-width: none !important;
+                    }
+
+                    [data-testid="stSelectbox"],
+                    [data-testid="stSelectbox"] > div {
+                        width: 800px;
+                    }
+
+
+                    /* Remove any padding or margins that might be limiting width */
+                    .main .block-container {
+                        max-width: 100% !important;
+                        padding-left: 1rem !important;
+                        padding-right: 1rem !important;
+                    }
+                    </style>
+                """, unsafe_allow_html=True)
+
     except ValueError as e:
         st.error(str(e))
     except Exception as e:
@@ -2429,5 +2622,51 @@ st.markdown("""
         color: #03a088;
         box-shadow: none;
     }
+    </style>
+""", unsafe_allow_html=True)
+
+# Add this CSS to your existing styles
+st.markdown("""
+    <style>
+    /* Fix for selectbox text truncation */
+    .stSelectbox div[data-baseweb="select"] > div {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        width: auto !important;
+        max-width: none !important;
+    }
+    
+    /* Style for the dropdown options */
+    div[role="listbox"] div {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        width: auto !important;
+        max-width: none !important;
+    }
+    
+    /* Ensure dropdown container is wide enough */
+    .stSelectbox div[data-baseweb="popover"] {
+        min-width: 300px !important;  /* Adjust this value as needed */
+    }
+    
+    /* Ensure the select container itself is wide enough */
+    .stSelectbox {
+        width: 100% !important;
+        max-width: 600px !important;  /* Adjust this value as needed */
+    }
+            
+
+    div[data-baseweb="select"] {
+        width: 100% !important;  /* Subtract padding if needed */
+        max-width: 100% !important;
+    }
+            
+    div[data-baseweb="select"] .stSelectbox {
+        white-space: normal !important; /* Allow multi-line wrapping */
+        word-wrap: break-word !important;
+    }
+
     </style>
 """, unsafe_allow_html=True)

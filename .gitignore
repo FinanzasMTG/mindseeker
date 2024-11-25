@@ -6,3 +6,6 @@ AllPrintings.sqlite
 .env
 /chromedriver
 test_perc.ipynb
+app_test.py
+app_old.py
+sqlite_import.py

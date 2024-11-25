@@ -941,7 +941,7 @@ if 'username_selected' not in st.session_state:
 
 # Remove the sidebar login content and move it to main
 if not st.session_state.username_selected:
-    # Center-align the logo and login form
+    # Center-align the logo
     st.markdown(f"""
         <div style="
             display: flex;
@@ -955,21 +955,18 @@ if not st.session_state.username_selected:
         </div>
     """, unsafe_allow_html=True)
 
-    # Create a narrower centered container for the login form
-    col1, col2, col3 = st.columns([2,1,2])  # Adjust ratio to make middle column narrower
-    with col2:
-        with st.form("login_form"):
-            input_username = st.text_input("Enter your username:")
-            password = st.text_input("Enter your password:", type="password")
-            submit_button = st.form_submit_button("Login")
-            
-            if submit_button:
-                if verify_credentials(input_username, password):
-                    st.session_state.username = input_username
-                    st.session_state.username_selected = True
-                    st.rerun()
-                else:
-                    st.error("Invalid username or password")
+    with st.form("login_form"):
+        input_username = st.text_input("Enter your username:")
+        password = st.text_input("Enter your password:", type="password")
+        submit_button = st.form_submit_button("Login")
+        
+        if submit_button:
+            if verify_credentials(input_username, password):
+                st.session_state.username = input_username
+                st.session_state.username_selected = True
+                st.rerun()
+            else:
+                st.error("Invalid username or password")
 
     # Display the intro text below login form
     st.info("""
@@ -1104,7 +1101,7 @@ if st.session_state.username_selected and st.session_state.username:
                     total_value = df['total_efficient_value'].sum()
                     # Ensure total_value is float before formatting
                     if pd.notnull(total_value):
-                        st.metric("Portfolio Value", f"€{float(total_value):,.2f}")
+                        st.metric("Portfolio Value", f"€{float(total_value):,.0f}")
                     else:
                         st.metric("Portfolio Value", "N/A")
                 
@@ -1112,7 +1109,7 @@ if st.session_state.username_selected and st.session_state.username:
                     avg_price = df['efficient_price'].mean()
                     # Ensure avg_price is float before formatting
                     if pd.notnull(avg_price):
-                        st.metric("Average Price", f"€{float(avg_price):.2f}")
+                        st.metric("Average Price", f"€{float(avg_price):,.0f}")
                     else:
                         st.metric("Average Price", "N/A")
                     
@@ -2242,48 +2239,41 @@ st.markdown("""
 # Add this CSS for login form styling
 st.markdown("""
     <style>
-    /* Login button specific styling */
+    /* Remove form container styling and border */
+    [data-testid="stForm"] {
+        max-width: 400px !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+    
+    /* Remove any container styling */
+    [data-testid="stForm"] > div {
+        background-color: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+    }
+    
+    /* Keep existing form element styling */
+    [data-testid="stForm"] input[type="text"],
+    [data-testid="stForm"] input[type="password"] {
+        width: 400px !important;
+    }
+    
+    /* Keep existing button styling */
     [data-testid="stForm"] .stButton > button {
+        width: 400px !important;
         color: #ffffff !important;
         border-color: #03a088 !important;
         background-color: #03a088 !important;
     }
     
-    [data-testid="stForm"] .stButton > button:hover {
-        background-color: #028474 !important;
-    }
-    
-    /* Password toggle button specific styling - exclude it from login button styling */
-    [data-testid="stForm"] button[aria-label="Toggle password visibility"],
-    [data-testid="stForm"] button[aria-label="Toggle password visibility"] svg,
-    [data-testid="stForm"] button[aria-label="Toggle password visibility"] path {
-        background: transparent !important;
-        border: none !important;
-        color: rgba(255, 255, 255, 0.5) !important;
-        fill: rgba(255, 255, 255, 0.5) !important;
-        stroke: rgba(255, 255, 255, 0.5) !important;
-    }
-    
-    /* Hover states for password toggle */
-    [data-testid="stForm"] button[aria-label="Toggle password visibility"]:hover,
-    [data-testid="stForm"] button[aria-label="Toggle password visibility"]:hover svg,
-    [data-testid="stForm"] button[aria-label="Toggle password visibility"]:hover path {
-        background: transparent !important;
-        color: rgba(255, 255, 255, 0.8) !important;
-        fill: rgba(255, 255, 255, 0.8) !important;
-        stroke: rgba(255, 255, 255, 0.8) !important;
-    }
-    
-    /* Remove any button styling from password toggle */
-    [data-testid="stForm"] button[aria-label="Toggle password visibility"] {
-        border: none !important;
-        box-shadow: none !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        background-color: transparent !important;
-    }
+    /* Rest of your existing form styles... */
     </style>
-""", unsafe_allow_html=True) 
+""", unsafe_allow_html=True)
 
 # Add this CSS to force hide the sidebar and its toggle button
 st.markdown("""

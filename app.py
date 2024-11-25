@@ -51,7 +51,7 @@ TRIVIAS = [
 
 # Page config and styling
 st.set_page_config(
-    page_title="KitsuneMTG by FinanzasMTG",
+    page_title="Kitsune Codex by FinanzasMTG",
     page_icon="🦊",
     layout="wide"
 )
@@ -973,7 +973,7 @@ if not st.session_state.username_selected:
 
     # Display the intro text below login form
     st.info("""
-    📈 Welcome to KitsuneMTG, your intelligent MTG Portfolio Tracker!
+    📈 Welcome to Kitsune Codex, your intelligent MTG Portfolio Tracker!
 
     This dashboard provides insights into your Magic: The Gathering collection, helping you make informed decisions about your cards.
 
@@ -981,16 +981,6 @@ if not st.session_state.username_selected:
             
     Enter your username to get started! 🎉
     """)
-
-    # Social Media Icons
-    st.markdown("""
-        <div style="display: flex; justify-content: center; gap: 30px; padding: 0px;">
-                <i class="fa-brands fa-x-twitter fa-lg" style="color: rgba(255,255,255,0.7);"></i>
-                <i class="fa-brands fa-youtube fa-lg" style="color: rgba(255,255,255,0.7);"></i>
-                <i class="fa-brands fa-patreon fa-lg" style="color: rgba(255,255,255,0.7);"></i>
-                <i class="fa-solid fa-globe fa-lg" style="color: rgba(255,255,255,0.7);"></i>
-        </div>
-    """, unsafe_allow_html=True)
 
     # Add Font Awesome CSS with latest version
     st.markdown("""

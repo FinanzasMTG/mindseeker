@@ -652,23 +652,23 @@ COLUMN_NAMES = {
     'signed': 'Signed',
     'country': 'Country',
     'from_price': 'From Price',
-    'trend_price': 'Trend Price in €',
-    'ms_trend_price': 'MS Trend Price in €',
-    'efficient_price': 'Efficient Price in €',
-    'conservative_price': 'Conservative Price in €',
-    'value_price': 'Value Price in €',
+    'trend_price': 'Trend Price',  # Removed "in €"
+    'ms_trend_price': 'MS Trend Price',  # Removed "in €"
+    'efficient_price': 'Efficient Price',  # Removed "in €"
+    'conservative_price': 'Conservative Price',  # Removed "in €"
+    'value_price': 'Value Price',  # Removed "in €"
     'alerts': 'Alerts',
     'notes': 'Notes',
     'date': 'Date',
-    'listed_price': 'Cardmarket Listed Price in €',
+    'listed_price': 'Cardmarket Listed Price',  # Removed "in €"
     'listed_stock': 'Cardmarket Listed Stock',
     'total_stock': 'Total Stock',
     'country_stock': 'Country Stock',
     'price_growth': 'Price Growth',
     'equity_in_country': 'Equity in Country',
     'equity_on_cardmarket': 'Equity on Cardmarket',
-    'total_efficient_value': 'Total Value in €',
-    'total_conservative_value': 'Conservative Value in €',
+    'total_efficient_value': 'Total Value',  # Removed "in €"
+    'total_conservative_value': 'Conservative Value',  # Removed "in €"
     'collection_number': 'Collection Number',
     'rarity': 'Rarity',
     'reserved_list': 'Reserved List',
@@ -976,7 +976,7 @@ if not st.session_state.username_selected:
 
     All data is synchronized with Cardmarket to ensure you have up-to-date information for your collection. Use the tabs above to navigate through different views and discover the full potential of your MTG portfolio.
             
-    Enter your username to get started! 🎉
+    Enter your username to get started! ���
     """)
 
     # Add Font Awesome CSS with latest version
@@ -1418,7 +1418,7 @@ if st.session_state.username_selected and st.session_state.username:
                 )
                 
                 # Create two columns for title and dropdown
-                col_title, col_dropdown = st.columns([3, 1])  # Adjust ratio as needed (3:1 here)
+                col_title, col_dropdown = st.columns([2, 1])  # Adjust ratio as needed (3:1 here)
 
                 # Add styling for the dropdown
                 st.markdown("""
@@ -1612,7 +1612,54 @@ if st.session_state.username_selected and st.session_state.username:
                         unsafe_allow_html=True
                     )
 
-                # Add CSS for table styling (simplified, removed color-related CSS)
+                # After the existing Reserved List and Non-Reserved List tables in tab2
+                # Add two more columns for price changes
+                st.markdown("<br>", unsafe_allow_html=True)
+                # Create two columns for the tables
+                col3, col4 = st.columns(2)
+
+                # Biggest Gainers (Left table)
+                with col3:
+                    st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Top 10 Price Gainers (7d)</h3>', unsafe_allow_html=True)
+                    
+                    # Filter and sort by price_diff_d7 descending
+                    top_gainers = df[table_columns].sort_values('price_diff_d7', ascending=False).head(10).copy()
+                    
+                    # Add rank and format columns
+                    top_gainers.insert(0, 'rank', range(1, len(top_gainers) + 1))
+                    top_gainers['efficient_price'] = top_gainers['efficient_price'].apply(lambda x: f"€{x:,.2f}")
+                    top_gainers['price_diff_d7'] = top_gainers['price_diff_d7'].apply(format_price_diff)
+                    
+                    # Rename columns for display
+                    top_gainers.columns = display_columns
+                    
+                    # Display table with styling
+                    st.markdown(
+                        top_gainers.to_html(index=False, escape=False),
+                        unsafe_allow_html=True
+                    )
+
+                # Biggest Losers (Right table)
+                with col4:
+                    st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Top 10 Price Losers (7d)</h3>', unsafe_allow_html=True)
+                    
+                    # Filter and sort by price_diff_d7 ascending
+                    top_losers = df[table_columns].sort_values('price_diff_d7', ascending=True).head(10).copy()
+                    
+                    # Add rank and format columns
+                    top_losers.insert(0, 'rank', range(1, len(top_losers) + 1))
+                    top_losers['efficient_price'] = top_losers['efficient_price'].apply(lambda x: f"€{x:,.2f}")
+                    top_losers['price_diff_d7'] = top_losers['price_diff_d7'].apply(format_price_diff)
+                    
+                    # Rename columns for display
+                    top_losers.columns = display_columns
+                    
+                    # Display table with styling
+                    st.markdown(
+                        top_losers.to_html(index=False, escape=False),
+                        unsafe_allow_html=True
+                    )
+
                 st.markdown("""
                     <style>
                     /* Table styling */
@@ -1621,25 +1668,39 @@ if st.session_state.username_selected and st.session_state.username:
                         border-collapse: collapse;
                         margin: 0;
                         background: #202020;
-                        border-radius: 4px;
+                        border-radius: 2px !important;
                         overflow: hidden;
                         font-size: 12px;
                         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+                        border: 1px solid #1f2335 !important;  /* Added border color */
                     }
                     
+                    /* More specific border styling */
+                    table, 
+                    table.dataframe,
+                    .dataframe table {
+                        border: 1px solid #363636 !important;
+                        border-color: #363636 !important;
+                    }
+                    
+                    /* Add border color to cells if needed */
+                    table td,
+                    table th {
+                        border-color: #363636 !important;
+                    }   
+
                     th {
-                        background: #1f2335 !important;
+                        background: #363636 !important;
                         padding: 12px 16px !important;
                         font-weight: 600 !important;
                         color: #03a088 !important;
                         text-align: left !important;
-                        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
                     }
                     
                     td {
                         padding: 12px 16px !important;
                         color: #ffffff !important;
-                        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                        
                     }
                     
                     /* Rank column styling */
@@ -1775,7 +1836,7 @@ if st.session_state.username_selected and st.session_state.username:
                                 }
                             )
     
-                        elif col in ['From Price', 'Trend Price in €', 'MS Trend Price in €', 'Efficient Price in €', 'Conservative Price in €', 'Value Price in €', 'Purchase Price in €', 'Cardmarket Listed Price in €', 'Listed Price in €']:
+                        elif col in ['From Price', 'Trend Price', 'MS Trend Price', 'Efficient Price', 'Conservative Price', 'Value Price', 'Purchase Price', 'Cardmarket Listed Price', 'Listed Price']:
                             # Make Card Name column wider
                             gb.configure_column(
                                 col,
@@ -1898,26 +1959,22 @@ if st.session_state.username_selected and st.session_state.username:
                         # Convert date column to datetime if it's not already
                         df_historical_filtered['date'] = pd.to_datetime(df_historical_filtered['date'])
                         
-                        col1, col2 = st.columns([3, 1])
+                        col1, col2 = st.columns([1, 1])
                         with col1:
-                            # Create card selector
-                            selected_cards = st.multiselect(
+                            selected_card = st.selectbox(
                                 "",
                                 options=sorted(user_cards),
-                                default=user_cards[0],
-                                max_selections=1,  # Limit to one selection
-                                label_visibility="collapsed"
+                                index=0,
+                                label_visibility="collapsed",
+                                key="tab4_select"
                             )
-                            
-                            # Get the single selected card (first/only item in the list)
-                            selected_card = selected_cards[0] if selected_cards else user_cards[0]
 
                         with col2:
                             st.write('')
 
                         # Filter data for selected card
                         card_data = df_historical_filtered[df_historical_filtered['card_name_set'] == selected_card]
-                        
+
                         if not card_data.empty:
                             # Add metrics before the chart
                             col1, col2, col3, col4 = st.columns(4)
@@ -1938,12 +1995,13 @@ if st.session_state.username_selected and st.session_state.username:
                                 avg_price = card_data['efficient_price'].mean()
                                 st.metric(f"Average Price", f"€{avg_price:.2f}")
                             
+                            #st.markdown(f'<p style="color: #ffffff; margin-bottom: 1rem;">Price History for {selected_card}</p>', unsafe_allow_html=True)
+
                             # Create the figure with both series
                             fig = px.line(
                                 card_data,
                                 x='date',
                                 y='efficient_price',
-                                title=f'» Price History for {selected_card}',
                                 labels={
                                     'date': 'Date',
                                     'efficient_price': 'Price (€)'
@@ -1957,7 +2015,7 @@ if st.session_state.username_selected and st.session_state.username:
                                 line_width=1,
                                 line_color="#fab900",
                                 annotation_text=f"Avg: €{avg_price:.2f}",
-                                annotation_position="right",
+                                annotation_position="left",
                                 annotation_font_color="#fab900"
                             )
 
@@ -1972,16 +2030,19 @@ if st.session_state.username_selected and st.session_state.username:
                             
                             # Update layout with specific title font size
                             fig.update_layout(
-                                height=500,
-                                margin=dict(t=20, l=20, r=20, b=20),
+                                height=550,
+                                margin=dict(t=30, l=30, r=30, b=30),
                                 paper_bgcolor='rgba(0,0,0,0)',
                                 plot_bgcolor='rgba(0,0,0,0)',
                                 font=dict(color='#ffffff'),
                                 autosize=True,
                                 showlegend=False,
                                 title=dict(
-                                    text=f'» Price History for {selected_card}',
-                                    font=dict(size=14)  # Set title font size to 14px
+                                    text=f'Price History for {selected_card}',
+                                    font=dict(size=14),
+                                    y=1,  # Move title down from top (1.0 is top, 0 is bottom)
+                                    yanchor='top',  # Anchor point for the y position
+                                    pad=dict(b=20, l=20)  # Add padding above (t) and below (b) the title
                                 ),
                                 xaxis=dict(
                                     showgrid=True,
@@ -1991,7 +2052,8 @@ if st.session_state.username_selected and st.session_state.username:
                                 yaxis=dict(
                                     showgrid=True,
                                     gridcolor='rgba(255, 255, 255, 0.1)',
-                                    tickprefix='€'
+                                    tickprefix='€',
+                                    range=[0, (card_data['efficient_price'].max() * 1.15)]
                                 )
                             )
                             
@@ -2429,7 +2491,7 @@ st.markdown("""
     
     /* Force wider select box */
     [data-testid="stSelectbox"] {
-        width: 300px !important;  /* Increased fixed width */
+        width: 100% !important;  /* Increased fixed width */
     }
     
     /* Override all nested select elements */
@@ -2439,8 +2501,8 @@ st.markdown("""
     [data-testid="stSelectbox"] div[data-baseweb="select"] > div,
     [data-testid="stSelectbox"] div[data-baseweb="select"] span,
     [data-testid="stSelectbox"] div[role="combobox"] {
-        min-width: 200px !important;
-        max-width: 300px !important;
+        min-width: 300px !important;
+        max-width: 100% !important;
     }
     
     /* Prevent text truncation */
@@ -2648,5 +2710,40 @@ st.markdown("""
         word-wrap: break-word !important;
     }
 
+    </style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+    <style>
+    /* Target specifically the selectbox with key="tab4_select" */
+    [data-testid="stSelectbox"] div[data-key="tab4_select"]
+        width: 800px !important;
+        min-width: 800px !important;
+        max-width: none !important;
+        background-color: #202020 !important;
+    }
+    
+    /* Make dropdown menu match width and background */
+    div[data-key="tab4_select"] ~ [data-baseweb="popover"] {
+        min-width: 800px !important;
+        width: 800px !important;
+        background-color: #202020 !important;
+    }
+
+    /* Style the dropdown options */
+    div[data-key="tab4_select"] ~ [data-baseweb="popover"] [role="option"] {
+        background-color: #202020 !important;
+        color: #ffffff !important;
+    }
+
+    /* Hover state for options */
+    div[data-key="tab4_select"] ~ [data-baseweb="popover"] [role="option"]:hover {
+        background-color: #363636 !important;
+    }
+            
+    .stMultiSelect [data-baseweb=select] span{
+            max-width: 300px !important;
+            font-size: 12px !important;
+        }
     </style>
 """, unsafe_allow_html=True)

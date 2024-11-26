@@ -17,6 +17,29 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 
+tab_descriptions = {
+    "Portfolio Overview": """
+        Get a high-level view of your collection with key metrics and visualizations. See your portfolio's distribution across different sets, 
+        analyze Reserved List composition, and understand your collection's rarity breakdown.
+    """,
+    
+    "Price Analysis": """
+        Deep dive into the pricing patterns of your collection. View price distributions, compare growth rates, 
+        and identify your top performing cards as well as potential opportunities.
+    """,
+    
+    "Inventory Details": """
+        Access detailed information about every card in your collection. Use powerful filtering and sorting tools 
+        to find specific cards and analyze their individual performance metrics.
+    """,
+    
+    "Historical Trends": """
+        Track how your cards' values have changed over time. View historical price charts and analyze price movements 
+        to make informed decisions about your collection.
+    """
+}
+
+
 @st.cache_data
 def load_historical_data():
     """Load and cache historical data from SQLite database"""
@@ -1113,7 +1136,10 @@ if st.session_state.username_selected and st.session_state.username:
             tab1, tab2, tab3, tab4, tab5 = st.tabs(["Portfolio Overview", "Price Analysis", "Inventory Details", "Historical Trends", "Sell Your Collection!"])
             
             with tab1:
-                st.markdown('<br>', unsafe_allow_html=True)
+                st.markdown(f'''
+                            <h3 style="color: #03a088; margin-bottom: 0px;">Portfolio Overview</h3>
+                            <p style="color: #ffffff; margin: -10px 0 30px 0; line-height: 1.2;">{tab_descriptions["Portfolio Overview"]}</p>''', unsafe_allow_html=True)
+            
                 col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 2])
 
                 metrics_style = """
@@ -1175,7 +1201,7 @@ if st.session_state.username_selected and st.session_state.username:
                 color_mapping = dict(zip(sorted_sets, colors))
 
                 st.markdown('<br>', unsafe_allow_html=True)    
-                st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Portfolio Overview by Set - Card Price</h3>', unsafe_allow_html=True)
+                st.markdown('<h5 style="color: #03a088; margin-bottom: -10px;">Portfolio Overview by Set - Card Price</h3>', unsafe_allow_html=True)
 
                 # Calculate total portfolio value
                 total_portfolio_value = df['total_efficient_value'].sum()
@@ -1242,7 +1268,7 @@ if st.session_state.username_selected and st.session_state.username:
                 st.markdown("<br>", unsafe_allow_html=True)
 
                 # Add header for second chart
-                st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Portfolio Distribution by Set - Amount of Cards</h3>', unsafe_allow_html=True)
+                st.markdown('<h5 style="color: #03a088; margin-bottom: -10px;">Portfolio Distribution by Set - Amount of Cards</h3>', unsafe_allow_html=True)
 
                 # Create a temporary dataframe for amount calculations
                 amount_data = df.groupby('card_set').agg({
@@ -1310,7 +1336,7 @@ if st.session_state.username_selected and st.session_state.username:
                 
                 with col1:
                     # Reserved List pie chart
-                    st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Reserved List Distribution</h3>', unsafe_allow_html=True)
+                    st.markdown('<h5 style="color: #03a088; margin-bottom: -10px;">Reserved List Distribution</h3>', unsafe_allow_html=True)
                     
                     # Group by Reserved List status and count distinct cards
                     rl_data = df.groupby('reserved_list')['card_name'].nunique().reset_index()
@@ -1358,7 +1384,7 @@ if st.session_state.username_selected and st.session_state.username:
                 
                 with col2:
                     # Rarity pie chart
-                    st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Rarity Distribution</h3>', unsafe_allow_html=True)
+                    st.markdown('<h5 style="color: #03a088; margin-bottom: -10px;">Rarity Distribution</h3>', unsafe_allow_html=True)
                     
                     # Group by Rarity and count distinct cards
                     rarity_data = df.groupby('rarity')['card_name'].nunique().reset_index()
@@ -1415,7 +1441,7 @@ if st.session_state.username_selected and st.session_state.username:
                 
                 with col3:
                     # Listed Status pie chart
-                    st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Listed Cards on Cardmarket</h3>', unsafe_allow_html=True)
+                    st.markdown('<h5 style="color: #03a088; margin-bottom: -10px;">Listed Cards on Cardmarket</h3>', unsafe_allow_html=True)
                     
                     # Create listed status data
                     df['listed_status'] = df['listed_stock'].apply(lambda x: 'Listed' if pd.notnull(x) and str(x).replace('.', '').isdigit() and float(x) > 0 else 'Not Listed')
@@ -1474,6 +1500,10 @@ if st.session_state.username_selected and st.session_state.username:
                 render_footer()
 
             with tab2:
+                st.markdown(f'''
+                            <h5 style="color: #03a088; margin-bottom: -10px;">Price Analysis</h3>
+                            <p style="color: #ffffff; margin: -10px 0 30px 0; line-height: 1.2;">{tab_descriptions["Price Analysis"]}</p>''', unsafe_allow_html=True)
+
                 # Add custom CSS for the chart container and dropdown
                 st.markdown("""
                     <style>
@@ -1488,7 +1518,7 @@ if st.session_state.username_selected and st.session_state.username:
                 """, unsafe_allow_html=True)
                 
                 # Price distribution title and chart
-                st.markdown('<h3 style="color: #03a088; margin-bottom: 5px;">Price Distribution</h3>', unsafe_allow_html=True)
+                st.markdown('<h5 style="color: #03a088; margin-bottom: 0px;">Price Distribution</h3>', unsafe_allow_html=True)
                 fig_price = px.histogram(
                     df,
                     x='efficient_price',
@@ -1587,7 +1617,7 @@ if st.session_state.username_selected and st.session_state.username:
 
                 # Title in the left column
                 with col_title:
-                    st.markdown(f'<h3 style="color: #03a088; margin-bottom: 5px; margin-top: 30px;">{selected_metric} vs Current Price</h3>', unsafe_allow_html=True)
+                    st.markdown(f'<h5 style="color: #03a088; margin-bottom: -10px; margin-top: 30px;">{selected_metric} vs Current Price</h3>', unsafe_allow_html=True)
 
 
                 # Create a temporary dataframe with formatted values based on selection
@@ -1684,7 +1714,7 @@ if st.session_state.username_selected and st.session_state.username:
                 
                 
                 with col1:
-                    st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Top 10 Reserved List Cards</h3>', unsafe_allow_html=True)
+                    st.markdown('<h5 style="color: #03a088; margin-bottom: -10px;">Top 10 Reserved List Cards</h3>', unsafe_allow_html=True)
                     
                     # Filter and sort reserved list cards
                     rl_cards = df[df['reserved_list'] == 'Yes'].sort_values('efficient_price', ascending=False)
@@ -1704,7 +1734,7 @@ if st.session_state.username_selected and st.session_state.username:
 
                 # Non-Reserved List Cards (Right table)
                 with col2:
-                    st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Top 10 Non-Reserved List Cards</h3>', unsafe_allow_html=True)
+                    st.markdown('<h5 style="color: #03a088; margin-bottom: -10px;">Top 10 Non-Reserved List Cards</h3>', unsafe_allow_html=True)
                     
                     # Filter and sort non-reserved list cards
                     non_rl_cards = df[df['reserved_list'] == 'No'].sort_values('efficient_price', ascending=False)
@@ -1730,7 +1760,7 @@ if st.session_state.username_selected and st.session_state.username:
 
                 # Biggest Gainers (Left table)
                 with col3:
-                    st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Top 10 Price Gainers (7d)</h3>', unsafe_allow_html=True)
+                    st.markdown('<h5 style="color: #03a088; margin-bottom: -10px;">Top 10 Price Gainers (7d)</h3>', unsafe_allow_html=True)
                     
                     # Filter and sort by price_diff_d7 descending
                     top_gainers = df[table_columns].sort_values('price_diff_d7', ascending=False).head(10).copy()
@@ -1751,7 +1781,7 @@ if st.session_state.username_selected and st.session_state.username:
 
                 # Biggest Losers (Right table)
                 with col4:
-                    st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Top 10 Price Losers (7d)</h3>', unsafe_allow_html=True)
+                    st.markdown('<h5 style="color: #03a088; margin-bottom: -10px;">Top 10 Price Losers (7d)</h3>', unsafe_allow_html=True)
                     
                     # Filter and sort by price_diff_d7 ascending
                     top_losers = df[table_columns].sort_values('price_diff_d7', ascending=True).head(10).copy()
@@ -1834,6 +1864,10 @@ if st.session_state.username_selected and st.session_state.username:
                 render_footer()
 
             with tab3:
+                st.markdown(f'''
+                            <h3 style="color: #03a088; margin-bottom: 0px;">Inventory Details</h3>
+                            <p style="color: #ffffff; margin: -10px 0 30px 0; line-height: 1.2;">{tab_descriptions["Inventory Details"]}</p>''', unsafe_allow_html=True)
+                
                 # Create two columns for dimensions and metrics
                 col1, col2 = st.columns(2)
                 
@@ -2060,6 +2094,10 @@ if st.session_state.username_selected and st.session_state.username:
                 render_footer()
 
             with tab4:
+                st.markdown(f'''
+                            <h3 style="color: #03a088; margin-bottom: 0px;">Historical Trends</h3>
+                            <p style="color: #ffffff; margin: -10px 0 30px 0; line-height: 1.2;">{tab_descriptions["Historical Trends"]}</p>''', unsafe_allow_html=True)
+                
                 # Load historical data
                 df_historical = load_historical_data()
                 

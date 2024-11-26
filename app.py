@@ -936,6 +936,37 @@ def verify_credentials(username, password):
     stored_password = user_row['password'].iloc[0]
     return password == stored_password
 
+def render_footer():
+        logo_path = os.path.join(assets_path, 'Alpha_Logo.png')
+        with open(logo_path, "rb") as f:
+            logo_contents = f.read()
+        logo_encoded = base64.b64encode(logo_contents).decode()
+    
+        st.markdown(
+            f"""
+            <div style="
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                padding: 0px;
+                margin-top: 0px;
+                text-align: center;
+            ">
+                <p style="
+                    color: #dddddd;
+                    margin: 50px 0 -10px 0;
+                    padding: 0;
+                    font-size: 12px;
+                    line-height: 1.5;
+                ">POWERED BY FINANZAS<span style="color: #00a195; font-weight: bold;">MTG</span></p>
+                <img src="data:image/png;base64,{logo_encoded}" style="width: 100px; height: auto;">
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
 # Move the login form from sidebar to main content
 if 'username_selected' not in st.session_state:
     st.session_state.username_selected = False
@@ -972,30 +1003,14 @@ if not st.session_state.username_selected:
 
     # Display the intro text below login form
     st.info("""
-    📈 Welcome to Kitsune Codex, your intelligent MTG Portfolio Tracker!
+    🦊 Welcome to Kitsune Codex, your intelligent MTG Portfolio Tracker!
 
     This dashboard provides insights into your Magic: The Gathering collection, helping you make informed decisions about your cards.
 
-    All data is synchronized with Cardmarket to ensure you have up-to-date information for your collection. Use the tabs above to navigate through different views and discover the full potential of your MTG portfolio.
+    All data is obtained from Cardmarket, the #1 MTG marketplace in Europe, to ensure you have up-to-date and relevant information for your collection. Use the tabs above to navigate through different views and discover the full potential of your MTG portfolio.
             
-    Enter your username to get started! ���
+    Enter your username to get started! 🎉
     """)
-
-    # Add Font Awesome CSS with latest version
-    st.markdown("""
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-        <style>
-        .fa-lg {
-            font-size: 1.5em !important;
-            cursor: pointer;
-        }
-        .fa-lg:hover {
-            color: #03a088 !important;
-            transform: scale(1.1);
-            transition: all 0.2s ease-in-out;
-        }
-        </style>
-    """, unsafe_allow_html=True)
 
     # Footer Logo
     logo_path = os.path.join(assets_path, 'Alpha_Logo.png')
@@ -1003,15 +1018,7 @@ if not st.session_state.username_selected:
         logo_contents = f.read()
     logo_encoded = base64.b64encode(logo_contents).decode()
 
-
-    st.markdown(
-        f"""
-        <div style="display: flex; justify-content: center; padding: 0px; margin-top: 0px;">
-            <img src="data:image/png;base64,{logo_encoded}" style="width: 100px; height: auto;">
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    render_footer()
     
 
 # Main app content (only shown after login)
@@ -1464,7 +1471,8 @@ if st.session_state.username_selected and st.session_state.username:
                     )
                     
                     st.plotly_chart(fig_listed, use_container_width=True)
-                
+                render_footer()
+
             with tab2:
                 # Add custom CSS for the chart container and dropdown
                 st.markdown("""
@@ -1823,7 +1831,7 @@ if st.session_state.username_selected and st.session_state.username:
                     </style>
                 """, unsafe_allow_html=True)
 
-                
+                render_footer()
 
             with tab3:
                 # Create two columns for dimensions and metrics
@@ -2049,6 +2057,8 @@ if st.session_state.username_selected and st.session_state.username:
                 else:
                     st.warning("Please select at least one column to display")
 
+                render_footer()
+
             with tab4:
                 # Load historical data
                 df_historical = load_historical_data()
@@ -2215,6 +2225,8 @@ if st.session_state.username_selected and st.session_state.username:
                     </style>
                 """, unsafe_allow_html=True)
 
+                render_footer()
+
             with tab5:
                 st.markdown('<h3 style="color: #ff8934; margin-bottom: 0px;">Collection Marketplace</h3>', unsafe_allow_html=True)
                 st.markdown('''<p style="font-size: 14px; color: #ffffff; margin-bottom: 1rem;">In this section, you will discover various offers for your entire collection. The buyers listed below have pledged to purchase your collection, provided the cards meet the descriptions specified on this platform. If you have any questions or require further assistance, feel free to contact us at sell@kitsunecodex.com.</p>
@@ -2306,10 +2318,13 @@ if st.session_state.username_selected and st.session_state.username:
                     <i>Terms & Conditions apply.</i>
                 </span>''', unsafe_allow_html=True)
 
+                render_footer()
+
     except ValueError as e:
         st.error(str(e))
     except Exception as e:
         st.error(f"Error loading data: {str(e)}")
+
 else:
 
     # Add social media links with logos

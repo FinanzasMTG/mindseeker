@@ -1,17 +1,19 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
+
 from google.oauth2 import service_account
 import gspread
 import os
-from dotenv import load_dotenv
 import base64
 import numpy as np
-import time
+
 from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 from st_aggrid.grid_options_builder import GridOptionsBuilder
 import random
 import sqlite3
+
+import plotly.colors as pc
+import plotly.express as px
 import plotly.graph_objects as go
 
 
@@ -1074,7 +1076,34 @@ if st.session_state.username_selected and st.session_state.username:
                         ">Data from Cardmarket as of {max_date}</p>''', unsafe_allow_html=True)
             
             # Tabs for different views
-            tab1, tab2, tab3, tab4 = st.tabs(["Portfolio Overview", "Price Analysis", "Inventory Details", "Historical Trends"])
+            # Add this CSS to your existing styles
+            st.markdown("""
+                <style>
+                /* Target the fifth tab specifically */
+                .stTabs [data-baseweb="tab-list"] [data-baseweb="tab"]:nth-child(5) {
+                    color: #ff8934 !important;
+                }
+                
+                /* Optional: Change the color when the fifth tab is selected */
+                .stTabs [data-baseweb="tab-list"] [data-baseweb="tab"][aria-selected="true"]:nth-child(5) {
+                    color: #ff8934 !important;
+                }
+                         
+                .stTabs [data-baseweb="tab-list"] [data-baseweb="tab"]:nth-child(5):hover {
+                    color: #fab900 !important;
+                    text-shadow: 0 0 20px rgba(255, 137, 52, 0.9) !important;
+                    transform: scale(1.1) !important;  /* Grow to 110% size */
+                    transition: all 0.3s ease !important;  /* Smooth transition for all properties */
+                }
+
+                /* Add base state transition for smooth animation */
+                .stTabs [data-baseweb="tab-list"] [data-baseweb="tab"]:nth-child(5) {
+                    transition: all 0.3s ease !important;
+                }
+                </style>
+            """, unsafe_allow_html=True)
+
+            tab1, tab2, tab3, tab4, tab5 = st.tabs(["Portfolio Overview", "Price Analysis", "Inventory Details", "Historical Trends", "Sell Collection"])
             
             with tab1:
                 st.markdown('<br>', unsafe_allow_html=True)
@@ -1126,10 +1155,20 @@ if st.session_state.username_selected and st.session_state.username:
                     else:
                         st.metric("Highest Price Change (7d)", "N/A")
 
+                # Create a consistent color mapping for all sets
+                n_sets = len(df['card_set'].unique())
+                colors = pc.sample_colorscale('Spectral', n_sets)  # You can change 'Viridis' to other scales
+                
+                # Get unique sets with their release dates
+                set_dates = df[['card_set', 'set_release_date']].drop_duplicates()
+                # Sort by release date
+                sorted_sets = set_dates.sort_values('set_release_date')['card_set'].unique()
 
+                # Create color mapping based on chronological order
+                color_mapping = dict(zip(sorted_sets, colors))
 
                 st.markdown('<br>', unsafe_allow_html=True)    
-                st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Portfolio Overview by Set</h3>', unsafe_allow_html=True)
+                st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Portfolio Overview by Set - Card Price</h3>', unsafe_allow_html=True)
 
                 # Calculate total portfolio value
                 total_portfolio_value = df['total_efficient_value'].sum()
@@ -1175,6 +1214,8 @@ if st.session_state.username_selected and st.session_state.username:
                     ])
                 )
                 
+                fig_sets.data[0].marker.colors = [color_mapping[set_name] for set_name in set_data['card_set']]
+                
                 # Display the chart
                 st.plotly_chart(
                     fig_sets, 
@@ -1191,6 +1232,69 @@ if st.session_state.username_selected and st.session_state.username:
                     }
                 )
                 
+                st.markdown("<br>", unsafe_allow_html=True)
+
+                # Add header for second chart
+                st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Portfolio Distribution by Set - Amount of Cards</h3>', unsafe_allow_html=True)
+
+                # Create a temporary dataframe for amount calculations
+                amount_data = df.groupby('card_set').agg({
+                    'amount': 'sum'
+                }).reset_index()
+
+                # Calculate percentages for hover info
+                total_amount = amount_data['amount'].sum()
+                amount_data['percentage'] = (amount_data['amount'] / total_amount * 100)
+
+                # Create treemap for amounts
+                fig_amounts = px.treemap(
+                    amount_data,
+                    path=['card_set'],
+                    values='amount',
+                    custom_data=['card_set', 'amount', 'percentage']
+                )
+
+                # Update treemap layout and hover template - keeping consistent styling
+                fig_amounts.update_layout(
+                    height=450,
+                    margin=dict(t=20, l=20, r=20, b=20),
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    font=dict(
+                        color='#ffffff',
+                        size=14
+                    ),
+                    autosize=True
+                )
+
+                # Customize hover template
+                fig_amounts.update_traces(
+                    hovertemplate="<br>".join([
+                        "<b>%{customdata[0]}</b>",  # Set name
+                        "Amount: %{customdata[1]:.0f}",  # Amount without decimal places
+                        "Percentage of Collection: %{customdata[2]:.1f}%",  # Percentage with 1 decimal
+                        "<extra></extra>"  # Remove secondary box
+                    ])
+                )
+
+                fig_amounts.data[0].marker.colors = [color_mapping[set_name] for set_name in amount_data['card_set']]
+
+                # Display the chart
+                st.plotly_chart(
+                    fig_amounts, 
+                    use_container_width=True,
+                    config={
+                        'displayModeBar': True,
+                        'displaylogo': False,
+                        'modeBarButtonsToRemove': ['select', 'lasso2d'],
+                        'responsive': True,
+                        'modeBarStyle': {
+                            'backgroundColor': 'transparent',
+                            'color': '#ffffff'
+                        }
+                    }
+                )
+
                 # Add spacing
                 st.markdown("<br>", unsafe_allow_html=True)
                 
@@ -1577,8 +1681,6 @@ if st.session_state.username_selected and st.session_state.username:
                     # Filter and sort reserved list cards
                     rl_cards = df[df['reserved_list'] == 'Yes'].sort_values('efficient_price', ascending=False)
                     top_10_rl = rl_cards[table_columns].head(10).copy()
-                    
-                    # Add rank and format columns
                     top_10_rl.insert(0, 'rank', range(1, len(top_10_rl) + 1))
                     top_10_rl['efficient_price'] = top_10_rl['efficient_price'].apply(lambda x: f"€{x:,.2f}")
                     top_10_rl['price_diff_d7'] = top_10_rl['price_diff_d7'].apply(format_price_diff)
@@ -1599,8 +1701,6 @@ if st.session_state.username_selected and st.session_state.username:
                     # Filter and sort non-reserved list cards
                     non_rl_cards = df[df['reserved_list'] == 'No'].sort_values('efficient_price', ascending=False)
                     top_10_non_rl = non_rl_cards[table_columns].head(10).copy()
-                    
-                    # Add rank and format columns
                     top_10_non_rl.insert(0, 'rank', range(1, len(top_10_non_rl) + 1))
                     top_10_non_rl['efficient_price'] = top_10_non_rl['efficient_price'].apply(lambda x: f"€{x:,.2f}")
                     top_10_non_rl['price_diff_d7'] = top_10_non_rl['price_diff_d7'].apply(format_price_diff)
@@ -2114,6 +2214,92 @@ if st.session_state.username_selected and st.session_state.username:
                     </style>
                 """, unsafe_allow_html=True)
 
+            with tab5:
+                st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Collection Offers</h3>', unsafe_allow_html=True)
+                
+                # Calculate offers
+                def calculate_offer(df, min_price, percentage):
+                    filtered_df = df[df['efficient_price'] >= min_price]
+                    total_value = filtered_df['total_efficient_value'].sum()
+                    return int(total_value * (percentage / 100))
+                
+                # Create offers data
+                offers_data = {
+                    'Buyer': ['webuyanycard', 'FinanzasMTG', 'ThreeForOne'],
+                    'Offer': [
+                        calculate_offer(df, 1, 60),  # webuyanycard: €1 min, 60%
+                        calculate_offer(df, 2, 75),  # FinanzasMTG: €2 min, 75%
+                        calculate_offer(df, 1, 50),  # ThreeForOne: €1 min, 50%
+                    ],
+                    'Details': [
+                        '60% of collection value (cards €1+)',
+                        '75% of collection value (cards €2+)',
+                        '50% of collection value (cards €1+)'
+                    ],
+                    'Contact': [
+                        '<a href="mailto:" style="background: #03a088; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; display: inline-block; width: 80%; text-align: center;">Sell to webuyanycard</a>',
+                        '<a href="mailto:" style="background: #03a088; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; display: inline-block; width: 80%; text-align: center;">Sell to FinanzasMTG</a>',
+                        '<a href="mailto:" style="background: #03a088; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; display: inline-block; width: 80%; text-align: center;">Sell to ThreeForOne</a>'
+                    ]
+                }
+                
+                # Create DataFrame
+                offers_df = pd.DataFrame(offers_data)
+                
+                # Format offers as currency
+                offers_df['Offer'] = offers_df['Offer'].apply(lambda x: f"€{x:,.2f}")
+                
+                # Convert DataFrame to HTML with a specific class
+                html_table = offers_df.to_html(index=False, escape=False, classes='offers-table')
+                
+                # Add styling specific to the offers table
+                st.markdown("""
+                <style>
+                /* Specific styling for offers table */
+                .offers-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 0;
+                    background: #202020;
+                    border-radius: 2px !important;
+                    overflow: hidden;
+                    font-size: 12px;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+                    border: 1px solid #1f2335 !important;
+                }
+                
+                .offers-table td,
+                .offers-table th {
+                    border-color: #363636 !important;
+                    text-align: center !important;
+                }   
+
+                .offers-table th {
+                    background: #1f2335 !important;
+                    padding: 12px 16px !important;
+                    font-weight: 600 !important;
+                    color: #03a088 !important;
+                }
+                
+                .offers-table td {
+                    padding: 12px 16px !important;
+                    color: #ffffff !important;
+                }
+                
+                .offers-table td a {
+                    margin: 0 auto !important;
+                    display: block !important;
+                }
+                
+                .offers-table tr:hover td {
+                    background: #292e42;
+                }
+                </style>
+            """, unsafe_allow_html=True)
+                
+                # Display table with styling
+                st.markdown(html_table, unsafe_allow_html=True)
+
     except ValueError as e:
         st.error(str(e))
     except Exception as e:
@@ -2122,6 +2308,7 @@ else:
 
     # Add social media links with logos
     assets_path = os.path.join(os.path.dirname(__file__), 'assets')
+
 
 
 # Add this function at the top of your file
@@ -2828,113 +3015,3 @@ def format_table_html(df, display_columns):
     </div>
     """
     return html
-
-st.markdown("""
-    <style>
-    /* Table container */
-    .table-container {
-        width: 100%;
-        margin: 0;
-        background: #202020;
-        border-radius: 2px;
-        overflow: hidden;
-        font-size: 12px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-        border: 1px solid #363636;
-    }
-    
-    /* Table styling */
-    .custom-table {
-        width: 100%;
-        border-collapse: collapse;
-        table-layout: fixed;
-        background: #202020;
-    }
-    
-    /* Column widths */
-    .custom-table th:nth-child(1),
-    .custom-table td:nth-child(1) {  /* Rank */
-        width: 50px;
-    }
-    
-    .custom-table th:nth-child(2),
-    .custom-table td:nth-child(2) {  /* Card Name */
-        width: 180px;
-    }
-    
-    .custom-table th:nth-child(3),
-    .custom-table td:nth-child(3) {  /* Set */
-        width: 120px;
-    }
-    
-    .custom-table th:nth-child(4),
-    .custom-table td:nth-child(4) {  /* Price */
-        width: 80px;
-    }
-    
-    .custom-table th:nth-child(5),
-    .custom-table td:nth-child(5) {  /* Change */
-        width: 80px;
-    }
-    
-    /* Cell styling */
-    .custom-table td {
-        padding: 12px 16px;
-        color: #ffffff;
-        border-color: #363636;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    
-    /* Rank column styling */
-    .custom-table td:first-child {
-        font-weight: 700;
-        color: #c1c1c1;
-    }
-    
-    /* Header styling */
-    .custom-table th {
-        background: #363636;
-        padding: 12px 16px;
-        font-weight: 600;
-        color: #03a088;
-        text-align: left;
-        border-color: #363636;
-    }
-    
-    /* Row hover effect */
-    .custom-table tr:hover td {
-        background: #292e42;
-    }
-    
-    /* Tooltip on hover */
-    .custom-table td[title] {
-        position: relative;
-    }
-    
-    .custom-table td[title]:hover::after {
-        content: attr(title);
-        position: absolute;
-        left: 0;
-        top: 100%;
-        z-index: 1000;
-        background: #202020;
-        color: #ffffff;
-        padding: 5px 10px;
-        border-radius: 4px;
-        white-space: nowrap;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        border: 1px solid #363636;
-    }
-    
-    /* Ensure columns maintain spacing */
-    div[data-testid="columns"] {
-        gap: 1rem !important;
-    }
-    
-    div[data-testid="column"] {
-        padding: 0 5px !important;
-    }
-    </style>
-""", unsafe_allow_html=True)

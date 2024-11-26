@@ -2150,7 +2150,8 @@ if st.session_state.username_selected and st.session_state.username:
                                 xaxis=dict(
                                     showgrid=True,
                                     gridcolor='rgba(255, 255, 255, 0.1)',
-                                    tickformat='%Y-%m-%d'
+                                    tickformat='%Y-%m-%d',
+                                    title=None 
                                 ),
                                 yaxis=dict(
                                     showgrid=True,
@@ -2215,7 +2216,9 @@ if st.session_state.username_selected and st.session_state.username:
                 """, unsafe_allow_html=True)
 
             with tab5:
-                st.markdown('<h3 style="color: #03a088; margin-bottom: 1rem;">Collection Offers</h3>', unsafe_allow_html=True)
+                st.markdown('<h3 style="color: #ff8934; margin-bottom: 0px;">Collection Marketplace</h3>', unsafe_allow_html=True)
+                st.markdown('''<p style="font-size: 14px; color: #ffffff; margin-bottom: 1rem;">In this section, you will discover various offers for your entire collection. The buyers listed below have pledged to purchase your collection, provided the cards meet the descriptions specified on this platform. If you have any questions or require further assistance, feel free to contact us at sell@kitsunecodex.com.</p>
+                            ''', unsafe_allow_html=True)
                 
                 # Calculate offers
                 def calculate_offer(df, min_price, percentage):
@@ -2237,9 +2240,9 @@ if st.session_state.username_selected and st.session_state.username:
                         '50% of collection value (cards €1+)'
                     ],
                     'Contact': [
-                        '<a href="mailto:" style="background: #03a088; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; display: inline-block; width: 80%; text-align: center;">Sell to webuyanycard</a>',
-                        '<a href="mailto:" style="background: #03a088; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; display: inline-block; width: 80%; text-align: center;">Sell to FinanzasMTG</a>',
-                        '<a href="mailto:" style="background: #03a088; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; display: inline-block; width: 80%; text-align: center;">Sell to ThreeForOne</a>'
+                        '<a href="mailto:" style="background: #ff8934; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; display: inline-block; width: 80%; text-align: center;">Sell to webuyanycard</a>',
+                        '<a href="mailto:" style="background: #ff8934; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; display: inline-block; width: 80%; text-align: center;">Sell to FinanzasMTG</a>',
+                        '<a href="mailto:" style="background: #ff8934; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; display: inline-block; width: 80%; text-align: center;">Sell to ThreeForOne</a>'
                     ]
                 }
                 
@@ -2278,7 +2281,7 @@ if st.session_state.username_selected and st.session_state.username:
                     background: #1f2335 !important;
                     padding: 12px 16px !important;
                     font-weight: 600 !important;
-                    color: #03a088 !important;
+                    color: #ff8934 !important;
                 }
                 
                 .offers-table td {
@@ -2299,6 +2302,9 @@ if st.session_state.username_selected and st.session_state.username:
                 
                 # Display table with styling
                 st.markdown(html_table, unsafe_allow_html=True)
+                st.markdown('''<span style="color: #a0a0a0; font-size: 12px; display: block; text-align: right;">
+                    <i>Terms & Conditions apply.</i>
+                </span>''', unsafe_allow_html=True)
 
     except ValueError as e:
         st.error(str(e))

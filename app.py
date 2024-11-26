@@ -1110,7 +1110,7 @@ if st.session_state.username_selected and st.session_state.username:
                 </style>
             """, unsafe_allow_html=True)
 
-            tab1, tab2, tab3, tab4, tab5 = st.tabs(["Portfolio Overview", "Price Analysis", "Inventory Details", "Historical Trends", "Sell Collection"])
+            tab1, tab2, tab3, tab4, tab5 = st.tabs(["Portfolio Overview", "Price Analysis", "Inventory Details", "Historical Trends", "Sell Your Collection!"])
             
             with tab1:
                 st.markdown('<br>', unsafe_allow_html=True)
@@ -1145,7 +1145,7 @@ if st.session_state.username_selected and st.session_state.username:
                     avg_price = df['efficient_price'].mean()
                     # Ensure avg_price is float before formatting
                     if pd.notnull(avg_price):
-                        st.metric("Average Price", f"€{float(avg_price):,.0f}")
+                        st.metric("Average Price", f"€{float(avg_price):,.2f}")
                     else:
                         st.metric("Average Price", "N/A")
                     
@@ -2236,20 +2236,20 @@ if st.session_state.username_selected and st.session_state.username:
                 def calculate_offer(df, min_price, percentage):
                     filtered_df = df[df['efficient_price'] >= min_price]
                     total_value = filtered_df['total_efficient_value'].sum()
-                    return int(total_value * (percentage / 100))
+                    return total_value * (percentage / 100)
                 
                 # Create offers data
                 offers_data = {
                     'Buyer': ['webuyanycard', 'FinanzasMTG', 'ThreeForOne'],
-                    'Offer': [
+                    'Initial Quote': [
                         calculate_offer(df, 1, 60),  # webuyanycard: €1 min, 60%
                         calculate_offer(df, 2, 75),  # FinanzasMTG: €2 min, 75%
                         calculate_offer(df, 1, 50),  # ThreeForOne: €1 min, 50%
                     ],
                     'Details': [
-                        '60% of collection value (cards €1+)',
-                        '75% of collection value (cards €2+)',
-                        '50% of collection value (cards €1+)'
+                        '60% of collection value (cards over €1 only)',
+                        '75% of collection value (cards over €2 only)',
+                        '50% of collection value (cards over €1 only)'
                     ],
                     'Contact': [
                         '<a href="mailto:" style="background: #ff8934; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; display: inline-block; width: 80%; text-align: center;">Sell to webuyanycard</a>',
@@ -2262,7 +2262,7 @@ if st.session_state.username_selected and st.session_state.username:
                 offers_df = pd.DataFrame(offers_data)
                 
                 # Format offers as currency
-                offers_df['Offer'] = offers_df['Offer'].apply(lambda x: f"€{x:,.2f}")
+                offers_df['Initial Quote'] = offers_df['Initial Quote'].apply(lambda x: f"€{x:,.0f}")
                 
                 # Convert DataFrame to HTML with a specific class
                 html_table = offers_df.to_html(index=False, escape=False, classes='offers-table')
@@ -2278,7 +2278,7 @@ if st.session_state.username_selected and st.session_state.username:
                     background: #202020;
                     border-radius: 2px !important;
                     overflow: hidden;
-                    font-size: 12px;
+                    font-size: 14px;
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
                     border: 1px solid #1f2335 !important;
                 }

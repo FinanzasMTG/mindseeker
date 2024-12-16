@@ -685,6 +685,7 @@ COLUMN_NAMES = {
     'alerts': 'Alerts',
     'notes': 'Notes',
     'date': 'Date',
+    'last_sold_date': 'Last Sold Date',
     'listed_price': 'Cardmarket Listed Price',  # Removed "in €"
     'listed_stock': 'Cardmarket Listed Stock',
     'total_stock': 'Total Stock',
@@ -706,7 +707,7 @@ COLUMN_NAMES = {
 # Default columns
 DEFAULT_COLUMNS = [
     'amount', 'card_name', 'card_set', 'language', 'condition', 
-    'foil', 'signed', 'alerts', 'price_diff_d7', 'from_price', 'trend_price',
+    'foil', 'signed', 'alerts', 'price_diff_d7', 'last_sold_date', 'from_price', 'trend_price',
     'ms_trend_price', 'efficient_price', 'conservative_price', 'value_price'
 ]
 
@@ -714,7 +715,7 @@ DEFAULT_COLUMNS = [
 column_categories = {
     "Dimensions": [
         'amount', 'card_name', 'card_set', 'language', 'condition', 
-        'foil', 'signed', 'country', 'alerts', 'notes', 
+        'foil', 'signed', 'country', 'last_sold_date', 'alerts', 'notes', 
         'collection_number', 'rarity', 'reserved_list', 'set_release_date', 'frame_era', 'set_type'
     ],
     "Metrics": [
@@ -1133,7 +1134,7 @@ if st.session_state.username_selected and st.session_state.username:
                 </style>
             """, unsafe_allow_html=True)
 
-            tab1, tab2, tab3, tab4, tab5 = st.tabs(["Portfolio Overview", "Price Analysis", "Inventory Details", "Historical Trends", "Sell Your Collection!"])
+            tab1, tab2, tab3, tab4 = st.tabs(["Portfolio Overview", "Price Analysis", "Inventory Details", "Historical Trends"])
             
             with tab1:
                 st.markdown(f'''
@@ -2262,99 +2263,6 @@ if st.session_state.username_selected and st.session_state.username:
                     }
                     </style>
                 """, unsafe_allow_html=True)
-
-                render_footer()
-
-            with tab5:
-                st.markdown('<h3 style="color: #ff8934; margin-bottom: 0px;">Collection Marketplace</h3>', unsafe_allow_html=True)
-                st.markdown('''<p style="font-size: 14px; color: #ffffff; margin-bottom: 1rem;">In this section, you will discover various offers for your entire collection. The buyers listed below have pledged to purchase your collection, provided the cards meet the descriptions specified on this platform. If you have any questions or require further assistance, feel free to contact us at sell@kitsunecodex.com.</p>
-                            ''', unsafe_allow_html=True)
-                
-                # Calculate offers
-                def calculate_offer(df, min_price, percentage):
-                    filtered_df = df[df['efficient_price'] >= min_price]
-                    total_value = filtered_df['total_efficient_value'].sum()
-                    return total_value * (percentage / 100)
-                
-                # Create offers data
-                offers_data = {
-                    'Buyer': ['webuyanycard', 'FinanzasMTG', 'ThreeForOne'],
-                    'Initial Quote': [
-                        calculate_offer(df, 1, 60),  # webuyanycard: €1 min, 60%
-                        calculate_offer(df, 2, 75),  # FinanzasMTG: €2 min, 75%
-                        calculate_offer(df, 1, 50),  # ThreeForOne: €1 min, 50%
-                    ],
-                    'Details': [
-                        '60% of collection value (cards over €1 only)',
-                        '75% of collection value (cards over €2 only)',
-                        '50% of collection value (cards over €1 only)'
-                    ],
-                    'Contact': [
-                        '<a href="mailto:" style="background: #ff8934; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; display: inline-block; width: 80%; text-align: center;">Sell to webuyanycard</a>',
-                        '<a href="mailto:" style="background: #ff8934; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; display: inline-block; width: 80%; text-align: center;">Sell to FinanzasMTG</a>',
-                        '<a href="mailto:" style="background: #ff8934; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; display: inline-block; width: 80%; text-align: center;">Sell to ThreeForOne</a>'
-                    ]
-                }
-                
-                # Create DataFrame
-                offers_df = pd.DataFrame(offers_data)
-                
-                # Format offers as currency
-                offers_df['Initial Quote'] = offers_df['Initial Quote'].apply(lambda x: f"€{x:,.0f}")
-                
-                # Convert DataFrame to HTML with a specific class
-                html_table = offers_df.to_html(index=False, escape=False, classes='offers-table')
-                
-                # Add styling specific to the offers table
-                st.markdown("""
-                <style>
-                /* Specific styling for offers table */
-                .offers-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin: 0;
-                    background: #202020;
-                    border-radius: 2px !important;
-                    overflow: hidden;
-                    font-size: 14px;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-                    border: 1px solid #1f2335 !important;
-                }
-                
-                .offers-table td,
-                .offers-table th {
-                    border-color: #363636 !important;
-                    text-align: center !important;
-                }   
-
-                .offers-table th {
-                    background: #1f2335 !important;
-                    padding: 12px 16px !important;
-                    font-weight: 600 !important;
-                    color: #ff8934 !important;
-                }
-                
-                .offers-table td {
-                    padding: 12px 16px !important;
-                    color: #ffffff !important;
-                }
-                
-                .offers-table td a {
-                    margin: 0 auto !important;
-                    display: block !important;
-                }
-                
-                .offers-table tr:hover td {
-                    background: #292e42;
-                }
-                </style>
-            """, unsafe_allow_html=True)
-                
-                # Display table with styling
-                st.markdown(html_table, unsafe_allow_html=True)
-                st.markdown('''<span style="color: #a0a0a0; font-size: 12px; display: block; text-align: right;">
-                    <i>Terms & Conditions apply.</i>
-                </span>''', unsafe_allow_html=True)
 
                 render_footer()
 

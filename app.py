@@ -686,6 +686,7 @@ COLUMN_NAMES = {
     'notes': 'Notes',
     'date': 'Date',
     'last_sold_date': 'Last Sold Date',
+    'liquidity': 'Liquidity',
     'listed_price': 'Cardmarket Listed Price',  # Removed "in €"
     'listed_stock': 'Cardmarket Listed Stock',
     'total_stock': 'Total Stock',
@@ -707,7 +708,7 @@ COLUMN_NAMES = {
 # Default columns
 DEFAULT_COLUMNS = [
     'amount', 'card_name', 'card_set', 'language', 'condition', 
-    'foil', 'signed', 'alerts', 'price_diff_d7', 'last_sold_date', 'from_price', 'trend_price',
+    'foil', 'signed', 'alerts', 'price_diff_d7', 'liquidity', 'last_sold_date', 'from_price', 'trend_price',
     'ms_trend_price', 'efficient_price', 'conservative_price', 'value_price'
 ]
 
@@ -715,7 +716,7 @@ DEFAULT_COLUMNS = [
 column_categories = {
     "Dimensions": [
         'amount', 'card_name', 'card_set', 'language', 'condition', 
-        'foil', 'signed', 'country', 'last_sold_date', 'alerts', 'notes', 
+        'foil', 'signed', 'country', 'liquidity', 'last_sold_date', 'alerts', 'notes', 
         'collection_number', 'rarity', 'reserved_list', 'set_release_date', 'frame_era', 'set_type'
     ],
     "Metrics": [
@@ -933,6 +934,27 @@ def load_user_data(username):
             # Apply cleaning function
             df[col] = df[col].apply(clean_percentage)
     
+    df['difference'] = (pd.to_datetime(df['date']) - pd.to_datetime(df['last_sold_date'])).dt.days
+
+    # Assign values based on the difference
+    def categorize_difference(diff):
+        if 0 <= diff <= 1:
+            return 'Very High'
+        elif 2 <= diff <= 7:
+            return 'High'
+        elif 8 <= diff <= 14:
+            return 'Moderate'
+        elif 15 <= diff <= 30:
+            return 'Low'
+        elif diff > 30:
+            return 'Very Low'
+        else:
+            return 'Not Available'  # In case of negative differences
+
+    # Create the new column based on the difference
+    df['liquidity'] = df['difference'].apply(categorize_difference)
+    df = df.drop(columns=['difference'])
+
     return df
 
 

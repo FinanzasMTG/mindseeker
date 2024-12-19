@@ -2075,6 +2075,32 @@ if st.session_state.username_selected and st.session_state.username:
                             cellStyle=alerts_cell_style
                         )
 
+                    if 'Liquidity' in df_display.columns:
+                        liquidity_cell_style = JsCode("""
+                        function(params) {
+                            if (params.value === null || params.value === undefined) return {};
+                            if (params.value === 'Very High') return { color: '#43aa8b' };
+                            if (params.value === 'High') return { color: '#90be6d' };
+                            if (params.value === 'Moderate') return { color: '#f9c74f' };
+                            if (params.value === 'Low') return { color: '#f8961e' };
+                            if (params.value === 'Very Low') return { color: '#f94144' };
+                            const val = parseInt(params.value);
+                            if (isNaN(val)) return {};
+                            return { color: colors[val] || '#ffffff' };
+                        }
+                        """)
+                        
+                        gb.configure_column(
+                            'Liquidity',
+                            type=["textColumn", "textColumnFilter"],
+                            filter=True,
+                            filterParams={
+                                'buttons': ['reset', 'apply'],
+                                'closeOnApply': True
+                            },
+                            cellStyle=liquidity_cell_style
+                        )
+
                     # Add additional grid options
                     grid_options = gb.build()
                     grid_options['enableRangeSelection'] = True

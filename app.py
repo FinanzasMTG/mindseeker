@@ -934,7 +934,7 @@ def load_user_data(username):
             # Apply cleaning function
             df[col] = df[col].apply(clean_percentage)
     
-    df['difference'] = (pd.to_datetime(df['date']) - pd.to_datetime(df['last_sold_date'])).dt.days
+    df['difference'] = (pd.to_datetime(df['date'], errors='coerce') - pd.to_datetime(df['last_sold_date'], errors='coerce')).dt.days
 
     # Assign values based on the difference
     def categorize_difference(diff):
@@ -1076,7 +1076,7 @@ if st.session_state.username_selected and st.session_state.username:
             st.error("No data found for this username")
         else:
             # Clean welcome header with date
-            max_date = pd.to_datetime(df['date']).max().strftime('%d/%m/%Y')
+            max_date = pd.to_datetime(df['date'], errors='coerce').max().strftime('%d/%m/%Y')
             # First, add the CSS style
             st.markdown("""
                 <style>
@@ -2158,7 +2158,7 @@ if st.session_state.username_selected and st.session_state.username:
                     df_historical_filtered = df_historical[df_historical['card_name_set'].isin(user_cards)]
                     if not df_historical_filtered.empty:
                         # Convert date column to datetime if it's not already
-                        df_historical_filtered['date'] = pd.to_datetime(df_historical_filtered['date'])
+                        df_historical_filtered['date'] = pd.to_datetime(df_historical_filtered['date'], errors='coerce')
                         
                         col1, col2 = st.columns([1, 1])
                         with col1:

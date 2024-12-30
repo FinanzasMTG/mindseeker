@@ -676,6 +676,7 @@ COLUMN_NAMES = {
     'foil': 'Foil',
     'signed': 'Signed',
     'country': 'Country',
+    'purchase_price': 'Purchase Price',
     'from_price': 'From Price',
     'trend_price': 'Trend Price',  # Removed "in €"
     'ms_trend_price': 'MS Trend Price',  # Removed "in €"
@@ -691,7 +692,7 @@ COLUMN_NAMES = {
     'listed_stock': 'Cardmarket Listed Stock',
     'total_stock': 'Total Stock',
     'country_stock': 'Country Stock',
-    'price_growth': 'Price Growth',
+    'price_growth': 'Purchase Price Change %',
     'equity_in_country': 'Equity in Country',
     'equity_on_cardmarket': 'Equity on Cardmarket',
     'total_efficient_value': 'Total Value',  # Removed "in €"
@@ -702,7 +703,8 @@ COLUMN_NAMES = {
     'set_release_date': 'Set Release Date',
     'frame_era': 'Frame Era',
     'set_type': 'Set Type',
-    'price_diff_d7': 'Today vs D7'
+    'price_diff_d7': 'Today vs D7',
+    'purchase_price_diff': 'Purchase Price Change'
 }
 
 # Default columns
@@ -722,8 +724,9 @@ column_categories = {
     "Metrics": [
         'from_price', 'trend_price', 'ms_trend_price', 'efficient_price', 
         'conservative_price', 'value_price', 'total_stock', 'country_stock', 
-        'price_growth', 'equity_in_country', 'equity_on_cardmarket', 'listed_price',
-        'listed_stock', 'total_efficient_value', 'total_conservative_value', 'price_diff_d7'
+        'equity_in_country', 'equity_on_cardmarket', 'listed_price',
+        'listed_stock', 'total_efficient_value', 'total_conservative_value', 'price_diff_d7',
+        'purchase_price', 'purchase_price_diff', 'price_growth'
     ]
 }
 
@@ -896,7 +899,7 @@ def load_user_data(username):
     # Price-related columns
     price_columns = [
         'trend_price', 'efficient_price', 'conservative_price', 
-        'from_price', 'value_price', 'purchase_price', 'listed_price',
+        'from_price', 'value_price', 'purchase_price', 'listed_price', 'purchase_price_diff',
         'total_efficient_value', 'total_conservative_value', 'ms_trend_price'
     ]
     
@@ -954,6 +957,12 @@ def load_user_data(username):
     # Create the new column based on the difference
     df['liquidity'] = df['difference'].apply(categorize_difference)
     df = df.drop(columns=['difference'])
+
+    # Ensure purchase_price is numeric and handle Nulls and empty spaces
+    df['purchase_price'] = pd.to_numeric(df['purchase_price'].replace('', np.nan), errors='coerce')
+
+    # Calculate the purchase price difference, treating NaNs as 0
+    df['purchase_price_diff'] = df['efficient_price'] - df['purchase_price'].fillna(0)
 
     return df
 
@@ -1934,7 +1943,7 @@ if st.session_state.username_selected and st.session_state.username:
                 
                 price_columns = [
                     'trend_price', 'efficient_price', 'conservative_price', 
-                    'from_price', 'value_price', 'purchase_price', 'listed_price',
+                    'from_price', 'value_price', 'purchase_price', 'listed_price', 'purchase_price_diff'
                     'total_efficient_value', 'total_conservative_value', 'ms_trend_price']
 
                 # Convert price columns to float before display
@@ -2005,14 +2014,14 @@ if st.session_state.username_selected and st.session_state.username:
                                 }
                             )
     
-                        elif col in ['From Price', 'Trend Price', 'MS Trend Price', 'Efficient Price', 'Conservative Price', 'Value Price', 'Purchase Price', 'Cardmarket Listed Price', 'Listed Price']:
+                        elif col in ['From Price', 'Trend Price', 'MS Trend Price', 'Efficient Price', 'Conservative Price', 'Value Price', 'Purchase Price', 'Purchase Price Change', 'Cardmarket Listed Price', 'Listed Price']:
                             # Make Card Name column wider
                             gb.configure_column(
                                 col,
                                 valueFormatter="'€' + x.toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2})"
                             )
 
-                        elif col in ['Today vs D7', 'Price Growth', 'Equity in Country', 'Equity on Cardmarket']:
+                        elif col in ['Today vs D7', 'Price Growth', 'Equity in Country', 'Equity on Cardmarket', 'Purchase Price Change %']:
                             cellStyle = JsCode("""
                             function(params) {
                                 if (params.value === null || params.value === undefined) return {};
@@ -2099,6 +2108,29 @@ if st.session_state.username_selected and st.session_state.username:
                                 'closeOnApply': True
                             },
                             cellStyle=liquidity_cell_style
+                        )
+
+                    if 'Purchase Price Change' in df_display.columns:
+                        purchase_price_change_cell_style = JsCode("""
+                        function(params) {
+                            if (params.value === null || params.value === undefined) return {};
+                            if (params.value > 0) return { color: '#00a195' };
+                            if (params.value < 0) return { color: '#e9536f' };
+                            const val = parseInt(params.value);
+                            if (isNaN(val)) return {};
+                            return { color: colors[val] || '#ffffff' };
+                        }
+                        """)
+                        
+                        gb.configure_column(
+                            'Purchase Price Change',
+                            type=["textColumn", "textColumnFilter"],
+                            filter=True,
+                            filterParams={
+                                'buttons': ['reset', 'apply'],
+                                'closeOnApply': True
+                            },
+                            cellStyle=purchase_price_change_cell_style
                         )
 
                     # Add additional grid options
